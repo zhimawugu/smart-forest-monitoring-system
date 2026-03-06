@@ -1,5 +1,6 @@
 #!/bin/bash
 
-mvn exec:java -pl server
+cd "$(dirname "$0")/.."
+mvn spring-boot:run -pl server
 
 

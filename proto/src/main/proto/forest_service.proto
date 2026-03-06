@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.nci.forest.proto";
+option java_outer_classname = "ForestServiceProto";
+
+package forestservice;
+
+// Forest Service - Forest Management Service
+service ForestService {
+  // Add a new forest
+  rpc AddForest(AddForestRequest) returns (AddForestResponse);
+
+  // Delete a forest
+  rpc DeleteForest(DeleteForestRequest) returns (DeleteForestResponse);
+
+  // List all forests
+  rpc ListForests(ListForestsRequest) returns (ListForestsResponse);
+}
+
+// Forest information
+message Forest {
+  string id = 1;              // Forest ID
+  string name = 2;            // Forest name
+  Location location = 3;      // Geographic location
+}
+
+// Geographic location
+message Location {
+  double latitude = 1;        // Latitude
+  double longitude = 2;       // Longitude
+  string address = 3;         // Address description (optional)
+}
+
+// Add forest request
+message AddForestRequest {
+  string name = 1;            // Forest name
+  Location location = 2;      // Geographic location
+}
+
+// Add forest response
+message AddForestResponse {
+  bool success = 1;           // Whether the operation succeeded
+  string message = 2;         // Response message
+  Forest forest = 3;          // Created forest information (with generated ID)
+}
+
+// Delete forest request
+message DeleteForestRequest {
+  string id = 1;              // Forest ID
+}
+
+// Delete forest response
+message DeleteForestResponse {
+  bool success = 1;           // Whether the operation succeeded
+  string message = 2;         // Response message
+}
+
+// List forests request
+message ListForestsRequest {
+  // Empty for now, returns all forests
+}
+
+// List forests response
+message ListForestsResponse {
+  repeated Forest forests = 1;  // List of forests
+  int32 total = 2;              // Total count
+}
+
+
