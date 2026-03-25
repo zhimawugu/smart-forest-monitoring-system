@@ -10,7 +10,6 @@ option java_outer_classname = "AlertServiceProto";
 message AlertConfig {
   string sensor_id = 1;
   double max_temperature = 2;
-  // min_temperature removed - only max alert is needed
 }
 
 // Alert event triggered when temperature exceeds threshold
@@ -21,7 +20,7 @@ message AlertEvent {
   double current_temperature = 4;
   double threshold = 5;
   int64 timestamp = 6;
-  string alert_type = 7;  // "OVER_TEMP" only
+  string alert_type = 7;
   string forest_id = 8;
 }
 
@@ -29,7 +28,6 @@ message AlertEvent {
 message SetAlertRequest {
   string sensor_id = 1;
   double max_temperature = 2;
-  // min_temperature removed - only max alert is needed
 }
 
 // Client request: acknowledge alert

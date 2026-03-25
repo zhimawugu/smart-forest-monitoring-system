@@ -62,15 +62,5 @@ public class TemperatureMonitoringService {
     public Map<String, TemperatureData> getAllLatestTemperatures() {
         return new HashMap<>(latestTemperatureData);
     }
-
-    /**
-     * Periodic cleanup of old temperature data (every 24 hours)
-     */
-    @Scheduled(fixedDelay = 86400000)  // 24 hours
-    public void cleanupOldTemperatureData() {
-        logger.info("Cleaning up old temperature data");
-        // In a real application, you would persist this to a database
-        // For now, we just keep the latest in memory
-    }
 }
 
