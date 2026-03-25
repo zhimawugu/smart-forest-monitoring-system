@@ -55,6 +55,9 @@ public class ForestManagementController {
         // Initialize gRPC client
         grpcClient = new ForestGrpcClient();
 
+        // Enable multiple selection in table
+        forestTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         // Setup table columns
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -157,36 +160,63 @@ public class ForestManagementController {
         });
     }
 
+
     /**
-     * Handle Delete Forest button click
+     * Handle Batch Delete button click
      */
     @FXML
-    private void handleDeleteForest() {
-        ForestModel selected = forestTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showWarning("No Selection", "Please select a forest to delete");
+    private void handleBatchDelete() {
+        // Get all selected items
+        ObservableList<ForestModel> selectedItems = forestTable.getSelectionModel().getSelectedItems();
+
+        if (selectedItems == null || selectedItems.isEmpty()) {
+            showWarning("No Selection", "Please select at least one forest to delete");
             return;
+        }
+
+        // Build confirmation message
+        StringBuilder forestNames = new StringBuilder();
+        for (int i = 0; i < selectedItems.size(); i++) {
+            if (i > 0) forestNames.append(", ");
+            forestNames.append(selectedItems.get(i).getName());
         }
 
         // Confirm deletion
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Confirm Deletion");
-        confirmAlert.setHeaderText("Delete Forest");
-        confirmAlert.setContentText("Are you sure you want to delete: " + selected.getName() + "?");
+        confirmAlert.setTitle("Confirm Batch Deletion");
+        confirmAlert.setHeaderText("Delete Multiple Forests");
+        confirmAlert.setContentText(String.format("Are you sure you want to delete %d forest(s)?\n\n%s",
+                selectedItems.size(), forestNames.toString()));
 
         Optional<ButtonType> result = confirmAlert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                var response = grpcClient.deleteForest(selected.getId());
-                if (response.getSuccess()) {
-                    showInfo("Success", response.getMessage());
-                    loadForests();
-                } else {
-                    showError("Failed", response.getMessage());
+            new Thread(() -> {
+                try {
+                    // Build delete requests
+                    java.util.List<com.nci.forest.proto.DeleteForestRequest> requests = new java.util.ArrayList<>();
+                    for (ForestModel forest : selectedItems) {
+                        requests.add(com.nci.forest.proto.DeleteForestRequest.newBuilder()
+                                .setId(forest.getId())
+                                .build());
+                    }
+
+                    // Send batch delete request
+                    var response = grpcClient.deleteForests(requests);
+
+                    Platform.runLater(() -> {
+                        if (response.getSuccess()) {
+                            showInfo("Success", response.getMessage());
+                        } else {
+                            showError("Failed", response.getMessage());
+                        }
+                        loadForests();
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
+                        showError("Error", "Failed to delete forests: " + e.getMessage());
+                    });
                 }
-            } catch (Exception e) {
-                showError("Error", "Failed to delete forest: " + e.getMessage());
-            }
+            }).start();
         }
     }
 

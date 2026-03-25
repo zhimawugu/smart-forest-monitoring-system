@@ -25,7 +25,8 @@
             </HBox.margin>
         </Button>
 
-        <Button fx:id="deleteButton" text="Delete Forest" onAction="#handleDeleteForest"
+
+        <Button fx:id="deleteButton" text="Batch Delete" onAction="#handleBatchDelete"
                 style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 12px;">
         </Button>
 

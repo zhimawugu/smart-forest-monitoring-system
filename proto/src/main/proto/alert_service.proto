@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package com.nci.forest.proto;
+
+option java_multiple_files = true;
+option java_package = "com.nci.forest.proto";
+option java_outer_classname = "AlertServiceProto";
+
+// Alert threshold configuration
+message AlertConfig {
+  string sensor_id = 1;
+  double max_temperature = 2;
+  // min_temperature removed - only max alert is needed
+}
+
+// Alert event triggered when temperature exceeds threshold
+message AlertEvent {
+  string alert_id = 1;
+  string sensor_id = 2;
+  string sensor_name = 3;
+  double current_temperature = 4;
+  double threshold = 5;
+  int64 timestamp = 6;
+  string alert_type = 7;  // "OVER_TEMP" only
+  string forest_id = 8;
+}
+
+// Request to set alert threshold
+message SetAlertRequest {
+  string sensor_id = 1;
+  double max_temperature = 2;
+  // min_temperature removed - only max alert is needed
+}
+
+// Client request: acknowledge alert
+message AckAlertRequest {
+  string alert_id = 1;
+}
+
+// Bidirectional message from client
+message AlertMessage {
+  oneof request {
+    SetAlertRequest set_alert = 1;
+    AckAlertRequest ack_alert = 2;
+  }
+}
+
+// Alert service definition
+service AlertService {
+  // Bidirectional streaming: client sends alert configs, server pushes alert events
+  rpc WatchAlerts(stream AlertMessage) returns (stream AlertEvent);
+}
+
+
+
+

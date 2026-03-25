@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.nci.forest.client.controller.AlertManagementController">
+    <top>
+        <VBox spacing="10" style="-fx-padding: 15;">
+            <!-- Title -->
+            <Label text="Alert Management" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+
+            <!-- Connection Status -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Status:" style="-fx-font-weight: bold;"/>
+                <Label fx:id="connectionStatusLabel" text="Connecting..." style="-fx-text-fill: orange;"/>
+            </HBox>
+
+            <!-- Alert Configuration Section -->
+            <TitledPane text="Alert Configuration" collapsible="false">
+                <VBox spacing="10" style="-fx-padding: 10;">
+                    <!-- Sensor Selection with Refresh Button -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="Select Sensor:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
+                        <ComboBox fx:id="sensorComboBox" prefWidth="250"/>
+                        <Button text="🔄 Refresh" onAction="#reloadSensors" style="-fx-padding: 5px 10px;"/>
+                    </HBox>
+
+                    <!-- Temperature Threshold -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="Max Temperature (°C):" style="-fx-font-weight: bold; -fx-min-width: 150;"/>
+                        <Spinner fx:id="maxTempSpinner" prefWidth="150"/>
+                    </HBox>
+
+                    <!-- Buttons -->
+                    <HBox spacing="10">
+                        <Button fx:id="setAlertButton" text="Set Alert" style="-fx-padding: 8px 20px;"/>
+                        <Button fx:id="clearAlertButton" text="Clear Alert" style="-fx-padding: 8px 20px;"/>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+
+            <!-- Latest Alert -->
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10; -fx-border-color: #cccccc; -fx-border-radius: 5;">
+                <Label text="Latest Alert:" style="-fx-font-weight: bold;"/>
+                <Label fx:id="selectedAlertLabel" text="None"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <!-- Alert Events Table -->
+        <VBox style="-fx-padding: 15;">
+            <Label text="Alert Events" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <TableView fx:id="alertTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="sensorNameColumn" text="Sensor Name" prefWidth="150"/>
+                    <TableColumn fx:id="alertTypeColumn" text="Alert Type" prefWidth="100"/>
+                    <TableColumn fx:id="tempColumn" text="Temperature" prefWidth="120"/>
+                    <TableColumn fx:id="thresholdColumn" text="Threshold" prefWidth="100"/>
+                    <TableColumn fx:id="timeColumn" text="Time" prefWidth="160"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+</BorderPane>
+
+
+

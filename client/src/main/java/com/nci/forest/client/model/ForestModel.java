@@ -30,10 +30,6 @@ public class ForestModel {
         return id.get();
     }
 
-    public void setId(String id) {
-        this.id.set(id);
-    }
-
     // Name property
     public StringProperty nameProperty() {
         return name;
@@ -41,10 +37,6 @@ public class ForestModel {
 
     public String getName() {
         return name.get();
-    }
-
-    public void setName(String name) {
-        this.name.set(name);
     }
 
     // Latitude property
@@ -56,10 +48,6 @@ public class ForestModel {
         return latitude.get();
     }
 
-    public void setLatitude(String latitude) {
-        this.latitude.set(latitude);
-    }
-
     // Longitude property
     public StringProperty longitudeProperty() {
         return longitude;
@@ -67,10 +55,6 @@ public class ForestModel {
 
     public String getLongitude() {
         return longitude.get();
-    }
-
-    public void setLongitude(String longitude) {
-        this.longitude.set(longitude);
     }
 
     // Address property
@@ -82,8 +66,11 @@ public class ForestModel {
         return address.get();
     }
 
-    public void setAddress(String address) {
-        this.address.set(address);
+
+    // Override toString to display Forest name in ComboBox
+    @Override
+    public String toString() {
+        return name.get();
     }
 }
 

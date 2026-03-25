@@ -14,5 +14,20 @@
         <fx:include source="forest-management.fxml"/>
     </Tab>
 
+    <!-- Sensor Management Tab -->
+    <Tab text="Sensor Management" closable="false">
+        <fx:include source="sensor-management.fxml"/>
+    </Tab>
+
+    <!-- Sensor Dashboard Tab -->
+    <Tab text="Sensor Dashboard" closable="false">
+        <fx:include source="sensor-dashboard.fxml"/>
+    </Tab>
+
+    <!-- Alert Management Tab -->
+    <Tab text="Alert Management" closable="false">
+        <fx:include source="alert-management.fxml"/>
+    </Tab>
+
 </TabPane>
 

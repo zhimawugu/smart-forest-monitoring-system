@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nci.forest.client.controller.SensorDashboardController"
+      spacing="10" style="-fx-padding: 10;">
+
+    <!-- Title -->
+    <Label text="Sensor Dashboard" style="-fx-font-size: 18px; -fx-font-weight: bold;">
+        <VBox.margin>
+            <Insets bottom="10"/>
+        </VBox.margin>
+    </Label>
+
+    <!-- Sensor Selection and Controls -->
+    <HBox spacing="10">
+        <Label text="Select Sensor:" style="-fx-font-size: 12px;"/>
+        <ComboBox fx:id="sensorComboBox" prefWidth="200" onAction="#handleSensorSelection"/>
+        <Button text="Refresh Sensors" onAction="#handleRefreshSensors"
+                style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="statusLabel" text="No sensor selected" style="-fx-text-fill: #999;"/>
+    </HBox>
+
+    <!-- Temperature Display Cards -->
+    <HBox spacing="15">
+        <!-- Current Temperature -->
+        <VBox style="-fx-border-color: #ddd; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #f9f9f9;" HBox.hgrow="ALWAYS">
+            <Label text="Current Temperature" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+            <Label fx:id="currentTempLabel" text="-- °C" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #FF6B6B;"/>
+            <Label fx:id="lastUpdateLabel" text="Last update: --" style="-fx-font-size: 10px; -fx-text-fill: #999;"/>
+        </VBox>
+
+        <!-- Average Temperature -->
+        <VBox style="-fx-border-color: #ddd; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #f9f9f9;" HBox.hgrow="ALWAYS">
+            <Label text="Average Temperature" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+            <Label fx:id="avgTempLabel" text="-- °C" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+            <Label text="Last 10 readings" style="-fx-font-size: 10px; -fx-text-fill: #999;"/>
+        </VBox>
+
+        <!-- Min/Max Temperature -->
+        <VBox style="-fx-border-color: #ddd; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #f9f9f9;" HBox.hgrow="ALWAYS">
+            <Label text="Min / Max" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+            <Label fx:id="minMaxLabel" text="-- / -- °C" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
+            <Label text="Today's range" style="-fx-font-size: 10px; -fx-text-fill: #999;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Data Table -->
+    <Label text="Temperature History" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+    <TableView fx:id="temperatureTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="timeColumn" text="Time" prefWidth="150"/>
+            <TableColumn fx:id="tempColumn" text="Temperature (°C)" prefWidth="150"/>
+            <TableColumn fx:id="sensorNameColumn" text="Sensor Name" prefWidth="150"/>
+        </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+        </columnResizePolicy>
+    </TableView>
+
+</VBox>
+

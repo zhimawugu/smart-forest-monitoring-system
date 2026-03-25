@@ -4,9 +4,11 @@ import com.nci.forest.proto.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -19,6 +21,7 @@ public class ForestGrpcClient {
 
     private final ManagedChannel channel;
     private final ForestServiceGrpc.ForestServiceBlockingStub blockingStub;
+    private final ForestServiceGrpc.ForestServiceStub asyncStub;
 
     /**
      * Constructor with custom host and port
@@ -28,6 +31,7 @@ public class ForestGrpcClient {
                 .usePlaintext()
                 .build();
         this.blockingStub = ForestServiceGrpc.newBlockingStub(channel);
+        this.asyncStub = ForestServiceGrpc.newStub(channel);
         logger.info("gRPC client connected to " + host + ":" + port);
     }
 
@@ -64,20 +68,62 @@ public class ForestGrpcClient {
     }
 
     /**
-     * Delete a forest by ID
+     * Delete multiple forests using client-side streaming
      */
-    public DeleteForestResponse deleteForest(String forestId) {
-        try {
-            DeleteForestRequest request = DeleteForestRequest.newBuilder()
-                    .setId(forestId)
-                    .build();
+    public DeleteForestResponse deleteForests(List<DeleteForestRequest> requests) {
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        final DeleteForestResponse[] responseHolder = new DeleteForestResponse[1];
+        final Exception[] exceptionHolder = new Exception[1];
 
-            DeleteForestResponse response = blockingStub.deleteForest(request);
-            logger.info("DeleteForest response: " + response.getMessage());
-            return response;
-        } catch (StatusRuntimeException e) {
-            logger.warning("RPC failed: " + e.getStatus());
-            throw new RuntimeException("Failed to delete forest: " + e.getMessage(), e);
+        StreamObserver<DeleteForestResponse> responseObserver = new StreamObserver<DeleteForestResponse>() {
+            @Override
+            public void onNext(DeleteForestResponse response) {
+                logger.info("DeleteForest response: " + response.getMessage());
+                responseHolder[0] = response;
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                logger.warning("DeleteForest failed: " + t.getMessage());
+                exceptionHolder[0] = new RuntimeException("Failed to delete forest(s): " + t.getMessage(), t);
+                finishLatch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                logger.info("DeleteForest stream completed");
+                finishLatch.countDown();
+            }
+        };
+
+        try {
+            StreamObserver<DeleteForestRequest> requestObserver = asyncStub.deleteForest(responseObserver);
+
+            // Send all requests
+            for (DeleteForestRequest request : requests) {
+                logger.info("Sending DeleteForest request: id=" + request.getId());
+                requestObserver.onNext(request);
+            }
+
+            // Mark the end of requests
+            requestObserver.onCompleted();
+
+            // Wait for response
+            if (!finishLatch.await(30, TimeUnit.SECONDS)) {
+                throw new RuntimeException("DeleteForest request timed out");
+            }
+
+            if (exceptionHolder[0] != null) {
+                throw exceptionHolder[0];
+            }
+
+            return responseHolder[0];
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("DeleteForest request interrupted", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete forest(s): " + e.getMessage(), e);
         }
     }
 
@@ -104,4 +150,3 @@ public class ForestGrpcClient {
         logger.info("gRPC client shutdown");
     }
 }
-

@@ -11,8 +11,8 @@ service ForestService {
   // Add a new forest
   rpc AddForest(AddForestRequest) returns (AddForestResponse);
 
-  // Delete a forest
-  rpc DeleteForest(DeleteForestRequest) returns (DeleteForestResponse);
+  // Delete forests (client-side streaming)
+  rpc DeleteForest(stream DeleteForestRequest) returns (DeleteForestResponse);
 
   // List all forests
   rpc ListForests(ListForestsRequest) returns (ListForestsResponse);

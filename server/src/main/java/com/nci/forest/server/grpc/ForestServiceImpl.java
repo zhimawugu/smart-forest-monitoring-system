@@ -1,4 +1,4 @@
-package com.nci.forest.server;
+package com.nci.forest.server.grpc;
 
 import com.nci.forest.proto.*;
 import io.grpc.stub.StreamObserver;
@@ -61,34 +61,80 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
     }
 
     @Override
-    public void deleteForest(DeleteForestRequest request, StreamObserver<DeleteForestResponse> responseObserver) {
-        logger.info("Received DeleteForest request: id={}", request.getId());
+    public StreamObserver<DeleteForestRequest> deleteForest(StreamObserver<DeleteForestResponse> responseObserver) {
+        logger.info("Client connected for streaming DeleteForest requests");
 
-        try {
-            // Validate request
-            if (request.getId() == null || request.getId().isEmpty()) {
-                sendDeleteForestResponse(false, "Forest ID cannot be empty", responseObserver);
-                return;
+        return new StreamObserver<DeleteForestRequest>() {
+            private int successCount = 0;
+            private int failureCount = 0;
+            private final StringBuilder errorMessages = new StringBuilder();
+
+            @Override
+            public void onNext(DeleteForestRequest request) {
+                logger.info("Received DeleteForest request: id={}", request.getId());
+
+                try {
+                    // Validate request
+                    if (request.getId() == null || request.getId().isEmpty()) {
+                        failureCount++;
+                        errorMessages.append("Forest ID cannot be empty; ");
+                        logger.warn("Invalid delete request: empty ID");
+                        return;
+                    }
+
+                    // Check if forest exists
+                    if (!forestStore.containsKey(request.getId())) {
+                        failureCount++;
+                        errorMessages.append("Forest not found: ").append(request.getId()).append("; ");
+                        logger.warn("Forest not found: {}", request.getId());
+                        return;
+                    }
+
+                    // Delete the forest
+                    Forest removedForest = forestStore.remove(request.getId());
+                    successCount++;
+
+                    logger.info("Forest deleted successfully: id={}, name={}", request.getId(), removedForest.getName());
+
+                } catch (Exception e) {
+                    failureCount++;
+                    errorMessages.append("Error: ").append(e.getMessage()).append("; ");
+                    logger.error("Error deleting forest: {}", e.getMessage(), e);
+                }
             }
 
-            // Check if forest exists
-            if (!forestStore.containsKey(request.getId())) {
-                sendDeleteForestResponse(false, "Forest not found with id: " + request.getId(), responseObserver);
-                return;
+            @Override
+            public void onError(Throwable t) {
+                logger.error("Error in DeleteForest stream: {}", t.getMessage(), t);
             }
 
-            // Delete the forest
-            Forest removedForest = forestStore.remove(request.getId());
+            @Override
+            public void onCompleted() {
+                logger.info("DeleteForest stream completed. Success: {}, Failure: {}", successCount, failureCount);
 
-            logger.info("Forest deleted successfully: id={}, name={}", request.getId(), removedForest.getName());
+                // Build response message
+                String message;
+                boolean success = successCount > 0;
 
-            // Send success response
-            sendDeleteForestResponse(true, "Forest deleted successfully", responseObserver);
+                if (failureCount == 0) {
+                    message = String.format("Successfully deleted %d forest(s)", successCount);
+                } else if (successCount == 0) {
+                    message = String.format("Failed to delete forests: %s", errorMessages.toString());
+                } else {
+                    message = String.format("Deleted %d forest(s), %d failed: %s",
+                            successCount, failureCount, errorMessages.toString());
+                }
 
-        } catch (Exception e) {
-            logger.error("Error deleting forest: {}", e.getMessage(), e);
-            sendDeleteForestResponse(false, "Internal error: " + e.getMessage(), responseObserver);
-        }
+                // Send response
+                DeleteForestResponse response = DeleteForestResponse.newBuilder()
+                        .setSuccess(success)
+                        .setMessage(message)
+                        .build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        };
     }
 
     @Override
@@ -147,5 +193,3 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
         responseObserver.onCompleted();
     }
 }
-
-

@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package com.nci.forest.proto;
+
+option java_multiple_files = true;
+option java_package = "com.nci.forest.proto";
+option java_outer_classname = "SensorServiceProto";
+
+// Empty message
+message Empty {
+}
+
+// Sensor entity
+message Sensor {
+  string id = 1;
+  string name = 2;
+  string forest_id = 3;
+  double latitude = 4;
+  double longitude = 5;
+  int64 created_at = 6;
+}
+
+// Location of sensor
+message SensorLocation {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// Request to add sensor
+message AddSensorRequest {
+  string forest_id = 1;
+  string name = 2;
+  SensorLocation location = 3;
+}
+
+// Response for add sensor
+message AddSensorResponse {
+  bool success = 1;
+  string message = 2;
+  Sensor sensor = 3;
+}
+
+// Request to remove sensor
+message RemoveSensorRequest {
+  string sensor_id = 1;
+}
+
+// Response for remove sensor
+message RemoveSensorResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Request to list sensors
+message ListSensorsRequest {
+  string forest_id = 1;
+}
+
+// Response for list sensors
+message ListSensorsResponse {
+  repeated Sensor sensors = 1;
+  int32 total = 2;
+}
+
+// Temperature data point
+message TemperatureData {
+  string sensor_id = 1;
+  string sensor_name = 2;
+  string forest_id = 3;
+  double temperature = 4;
+  int64 timestamp = 5;
+}
+
+// Stream temperature data
+message StreamTemperatureRequest {
+  string sensor_id = 1;
+  string forest_id = 2;
+}
+
+// Sensor service definition
+service SensorService {
+  // Add sensor to forest
+  rpc AddSensor(AddSensorRequest) returns (AddSensorResponse);
+
+  // Remove sensor from forest
+  rpc RemoveSensor(RemoveSensorRequest) returns (RemoveSensorResponse);
+
+  // List all sensors in a forest
+  rpc ListSensors(ListSensorsRequest) returns (ListSensorsResponse);
+
+  // Stream temperature data from client to server
+  rpc StreamTemperatureData(stream TemperatureData) returns (Empty);
+}
+
