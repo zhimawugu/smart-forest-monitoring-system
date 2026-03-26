@@ -65,6 +65,13 @@
             <version>2.0.17</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- mDNS / DNS-SD service discovery -->
+        <dependency>
+            <groupId>org.jmdns</groupId>
+            <artifactId>jmdns</artifactId>
+            <version>3.6.0</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -39,7 +39,13 @@ public class ForestGrpcClient {
      * Constructor with default localhost:50051
      */
     public ForestGrpcClient() {
-        this("localhost", 50051);
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
+                .usePlaintext()
+                .build();
+        this.blockingStub = ForestServiceGrpc.newBlockingStub(channel);
+        this.asyncStub = ForestServiceGrpc.newStub(channel);
+        logger.info("gRPC client connected to " + endpoint.host() + ":" + endpoint.port());
     }
 
     /**

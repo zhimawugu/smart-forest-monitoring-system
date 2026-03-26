@@ -46,6 +46,14 @@
             <version>${grpc-spring-boot-starter.version}</version>
         </dependency>
 
+
+        <!-- mDNS / DNS-SD service registration -->
+        <dependency>
+            <groupId>org.jmdns</groupId>
+            <artifactId>jmdns</artifactId>
+            <version>3.6.0</version>
+        </dependency>
+
         <!-- Lombok (Optional, for cleaner code) -->
         <dependency>
             <groupId>org.projectlombok</groupId>

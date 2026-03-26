@@ -39,7 +39,12 @@ public class AlertGrpcClient {
     }
 
     public AlertGrpcClient() {
-        this("localhost", 50051);
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
+                .usePlaintext()
+                .build();
+        this.asyncStub = AlertServiceGrpc.newStub(channel);
+        logger.info("Alert gRPC client created for {}:{}", endpoint.host(), endpoint.port());
     }
 
     /**

@@ -30,7 +30,12 @@ public class TemperatureDataStreamClient {
     }
 
     public TemperatureDataStreamClient() {
-        this("localhost", 50051);
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
+                .usePlaintext()
+                .build();
+        this.asyncStub = SensorServiceGrpc.newStub(channel);
+        logger.info("Temperature stream client created for {}:{}", endpoint.host(), endpoint.port());
     }
 
     /**

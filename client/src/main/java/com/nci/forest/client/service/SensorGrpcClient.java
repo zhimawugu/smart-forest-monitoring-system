@@ -19,19 +19,22 @@ public class SensorGrpcClient {
 
     private final ManagedChannel channel;
     private final SensorServiceGrpc.SensorServiceBlockingStub blockingStub;
-    private final SensorServiceGrpc.SensorServiceStub asyncStub;
 
     public SensorGrpcClient(String host, int port) {
         this.channel = ManagedChannelBuilder.forAddress(host, port)
                 .usePlaintext()
                 .build();
         this.blockingStub = SensorServiceGrpc.newBlockingStub(channel);
-        this.asyncStub = SensorServiceGrpc.newStub(channel);
         logger.info("Sensor gRPC client connected to {}:{}", host, port);
     }
 
     public SensorGrpcClient() {
-        this("localhost", 50051);
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
+                .usePlaintext()
+                .build();
+        this.blockingStub = SensorServiceGrpc.newBlockingStub(channel);
+        logger.info("Sensor gRPC client connected to {}:{}", endpoint.host(), endpoint.port());
     }
 
     /**
