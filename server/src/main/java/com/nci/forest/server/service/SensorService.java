@@ -1,6 +1,7 @@
 package com.nci.forest.server.service;
 
 import com.nci.forest.proto.*;
+import com.nci.forest.server.util.LocationValidator;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +36,8 @@ public class SensorService {
                 .setId(sensorId)
                 .setName(request.getName())
                 .setForestId(request.getForestId())
-                .setLatitude(request.getLocation().getLatitude())
-                .setLongitude(request.getLocation().getLongitude())
+                .setLatitude(request.getLatitude())
+                .setLongitude(request.getLongitude())
                 .setCreatedAt(System.currentTimeMillis())
                 .build();
 

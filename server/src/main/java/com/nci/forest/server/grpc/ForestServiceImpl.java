@@ -1,6 +1,7 @@
 package com.nci.forest.server.grpc;
 
 import com.nci.forest.proto.*;
+import com.nci.forest.server.util.LocationValidator;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -25,14 +26,19 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
         logger.info("Received AddForest request: name={}", request.getName());
 
         try {
-            // Validate request
+            // Validate request - name
             if (request.getName() == null || request.getName().isEmpty()) {
-                sendAddForestResponse(false, "Forest name cannot be empty", null, responseObserver);
+                String errorMsg = "Forest name cannot be empty";
+                logger.warn("AddForest validation failed: {}", errorMsg);
+                responseObserver.onError(new IllegalArgumentException(errorMsg));
                 return;
             }
 
-            if (request.getLocation() == null) {
-                sendAddForestResponse(false, "Location cannot be null", null, responseObserver);
+            // Validate location coordinates
+            String locationError = LocationValidator.validateCoordinates(request.getLatitude(), request.getLongitude());
+            if (locationError != null) {
+                logger.warn("AddForest validation failed: {}", locationError);
+                responseObserver.onError(new IllegalArgumentException(locationError));
                 return;
             }
 
@@ -43,7 +49,8 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
             Forest forest = Forest.newBuilder()
                     .setId(forestId)
                     .setName(request.getName())
-                    .setLocation(request.getLocation())
+                    .setLatitude(request.getLatitude())
+                    .setLongitude(request.getLongitude())
                     .build();
 
             // Store the forest

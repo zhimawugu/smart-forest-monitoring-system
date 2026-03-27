@@ -128,9 +128,9 @@ public class SensorManagementController {
                         ForestModel model = new ForestModel(
                                 forest.getId(),
                                 forest.getName(),
-                                String.valueOf(forest.getLocation().getLatitude()),
-                                String.valueOf(forest.getLocation().getLongitude()),
-                                forest.getLocation().getAddress()
+                                String.valueOf(forest.getLatitude()),
+                                String.valueOf(forest.getLongitude()),
+                                ""
                         );
                         forestComboBox.getItems().add(model);
                     }

@@ -8,7 +8,7 @@ import io.grpc.stub.StreamObserver;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -18,10 +18,12 @@ import java.util.logging.Logger;
  */
 public class ForestGrpcClient {
     private static final Logger logger = Logger.getLogger(ForestGrpcClient.class.getName());
+    private static final long DEFAULT_DEADLINE_SECONDS = 30;
 
     private final ManagedChannel channel;
     private final ForestServiceGrpc.ForestServiceBlockingStub blockingStub;
     private final ForestServiceGrpc.ForestServiceStub asyncStub;
+    private long deadlineSeconds = DEFAULT_DEADLINE_SECONDS;
 
     /**
      * Constructor with custom host and port
@@ -53,18 +55,15 @@ public class ForestGrpcClient {
      */
     public AddForestResponse addForest(String name, double latitude, double longitude, String address) {
         try {
-            Location location = Location.newBuilder()
-                    .setLatitude(latitude)
-                    .setLongitude(longitude)
-                    .setAddress(address)
-                    .build();
-
             AddForestRequest request = AddForestRequest.newBuilder()
                     .setName(name)
-                    .setLocation(location)
+                    .setLatitude(latitude)
+                    .setLongitude(longitude)
                     .build();
 
-            AddForestResponse response = blockingStub.addForest(request);
+            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = 
+                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            AddForestResponse response = stubWithDeadline.addForest(request);
             logger.info("AddForest response: " + response.getMessage());
             return response;
         } catch (StatusRuntimeException e) {
@@ -77,33 +76,33 @@ public class ForestGrpcClient {
      * Delete multiple forests using client-side streaming
      */
     public DeleteForestResponse deleteForests(List<DeleteForestRequest> requests) {
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-        final DeleteForestResponse[] responseHolder = new DeleteForestResponse[1];
-        final Exception[] exceptionHolder = new Exception[1];
+        CompletableFuture<DeleteForestResponse> responseFuture = new CompletableFuture<>();
 
-        StreamObserver<DeleteForestResponse> responseObserver = new StreamObserver<DeleteForestResponse>() {
+        StreamObserver<DeleteForestResponse> responseObserver = new StreamObserver<>() {
             @Override
             public void onNext(DeleteForestResponse response) {
                 logger.info("DeleteForest response: " + response.getMessage());
-                responseHolder[0] = response;
+                responseFuture.complete(response);
             }
 
             @Override
             public void onError(Throwable t) {
                 logger.warning("DeleteForest failed: " + t.getMessage());
-                exceptionHolder[0] = new RuntimeException("Failed to delete forest(s): " + t.getMessage(), t);
-                finishLatch.countDown();
+                responseFuture.completeExceptionally(
+                        new RuntimeException("Failed to delete forest(s): " + t.getMessage(), t)
+                );
             }
 
             @Override
             public void onCompleted() {
                 logger.info("DeleteForest stream completed");
-                finishLatch.countDown();
             }
         };
 
         try {
-            StreamObserver<DeleteForestRequest> requestObserver = asyncStub.deleteForest(responseObserver);
+            ForestServiceGrpc.ForestServiceStub asyncStubWithDeadline = 
+                asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            StreamObserver<DeleteForestRequest> requestObserver = asyncStubWithDeadline.deleteForest(responseObserver);
 
             // Send all requests
             for (DeleteForestRequest request : requests) {
@@ -114,20 +113,9 @@ public class ForestGrpcClient {
             // Mark the end of requests
             requestObserver.onCompleted();
 
-            // Wait for response
-            if (!finishLatch.await(30, TimeUnit.SECONDS)) {
-                throw new RuntimeException("DeleteForest request timed out");
-            }
+            // Wait for response with timeout, +5 to prevent network delay when calling remote api and retrieving data
+            return responseFuture.get(deadlineSeconds + 5, TimeUnit.SECONDS);
 
-            if (exceptionHolder[0] != null) {
-                throw exceptionHolder[0];
-            }
-
-            return responseHolder[0];
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("DeleteForest request interrupted", e);
         } catch (Exception e) {
             throw new RuntimeException("Failed to delete forest(s): " + e.getMessage(), e);
         }
@@ -139,7 +127,9 @@ public class ForestGrpcClient {
     public List<Forest> listForests() {
         try {
             ListForestsRequest request = ListForestsRequest.newBuilder().build();
-            ListForestsResponse response = blockingStub.listForests(request);
+            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = 
+                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            ListForestsResponse response = stubWithDeadline.listForests(request);
             logger.info("Listed " + response.getTotal() + " forests");
             return new ArrayList<>(response.getForestsList());
         } catch (StatusRuntimeException e) {

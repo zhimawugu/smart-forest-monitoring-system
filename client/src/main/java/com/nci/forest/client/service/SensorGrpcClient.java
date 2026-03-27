@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Sensor gRPC Client Service
@@ -16,9 +17,11 @@ import java.util.List;
 public class SensorGrpcClient {
 
     private static final Logger logger = LoggerFactory.getLogger(SensorGrpcClient.class);
+    private static final long DEFAULT_DEADLINE_SECONDS = 30;
 
     private final ManagedChannel channel;
     private final SensorServiceGrpc.SensorServiceBlockingStub blockingStub;
+    private long deadlineSeconds = DEFAULT_DEADLINE_SECONDS;
 
     public SensorGrpcClient(String host, int port) {
         this.channel = ManagedChannelBuilder.forAddress(host, port)
@@ -45,18 +48,16 @@ public class SensorGrpcClient {
         try {
             logger.info("Adding sensor: {} to forest: {}", sensorName, forestId);
 
-            SensorLocation location = SensorLocation.newBuilder()
+            AddSensorRequest request = AddSensorRequest.newBuilder()
+                    .setForestId(forestId)
+                    .setName(sensorName)
                     .setLatitude(latitude)
                     .setLongitude(longitude)
                     .build();
 
-            AddSensorRequest request = AddSensorRequest.newBuilder()
-                    .setForestId(forestId)
-                    .setName(sensorName)
-                    .setLocation(location)
-                    .build();
-
-            AddSensorResponse response = blockingStub.addSensor(request);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
+                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            AddSensorResponse response = stubWithDeadline.addSensor(request);
             logger.info("Sensor added successfully: {}", response.getSensor().getId());
             return response;
         } catch (Exception e) {
@@ -76,7 +77,9 @@ public class SensorGrpcClient {
                     .setSensorId(sensorId)
                     .build();
 
-            RemoveSensorResponse response = blockingStub.removeSensor(request);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
+                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            RemoveSensorResponse response = stubWithDeadline.removeSensor(request);
             logger.info("Sensor removed: {}", response.getMessage());
             return response;
         } catch (Exception e) {
@@ -96,7 +99,9 @@ public class SensorGrpcClient {
                     .setForestId(forestId)
                     .build();
 
-            ListSensorsResponse response = blockingStub.listSensors(request);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
+                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            ListSensorsResponse response = stubWithDeadline.listSensors(request);
             logger.info("Found {} sensors in forest: {}", response.getTotal(), forestId);
             return new ArrayList<>(response.getSensorsList());
         } catch (Exception e) {
@@ -105,6 +110,12 @@ public class SensorGrpcClient {
         }
     }
 
+    /**
+     * Set the deadline for gRPC calls (in seconds)
+     */
+    public void setDeadlineSeconds(long seconds) {
+        this.deadlineSeconds = seconds;
+    }
 
     public void shutdown() throws InterruptedException {
         channel.shutdown();

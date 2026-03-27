@@ -7,7 +7,7 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Alert gRPC Client Service
@@ -16,11 +16,12 @@ import java.util.concurrent.CountDownLatch;
 public class AlertGrpcClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AlertGrpcClient.class);
+    private static final long DEFAULT_DEADLINE_SECONDS = 30;
 
     private final ManagedChannel channel;
     private final AlertServiceGrpc.AlertServiceStub asyncStub;
     private StreamObserver<AlertMessage> requestObserver;
-    private CountDownLatch connectedLatch;
+    private long deadlineSeconds = DEFAULT_DEADLINE_SECONDS;
 
     public interface AlertEventCallback {
         void onAlertReceived(AlertEvent event);
@@ -53,8 +54,6 @@ public class AlertGrpcClient {
     public void startWatchingAlerts(AlertEventCallback callback) {
         logger.info("Starting to watch alerts from server");
 
-        connectedLatch = new CountDownLatch(1);
-
         // Create response observer for receiving alerts from server
         StreamObserver<AlertEvent> responseObserver = new StreamObserver<AlertEvent>() {
             @Override
@@ -85,8 +84,9 @@ public class AlertGrpcClient {
         };
 
         // Create bidirectional stream and store request observer
-        this.requestObserver = asyncStub.watchAlerts(responseObserver);
-        connectedLatch.countDown();
+        AlertServiceGrpc.AlertServiceStub asyncStubWithDeadline = 
+            asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+        this.requestObserver = asyncStubWithDeadline.watchAlerts(responseObserver);
         logger.info("Alert watch stream established");
     }
 
@@ -116,6 +116,12 @@ public class AlertGrpcClient {
         }
     }
 
+    /**
+     * Set the deadline for gRPC calls (in seconds)
+     */
+    public void setDeadlineSeconds(long seconds) {
+        this.deadlineSeconds = seconds;
+    }
 
     /**
      * Close the alert watch stream and channel

@@ -20,17 +20,12 @@ message Sensor {
   int64 created_at = 6;
 }
 
-// Location of sensor
-message SensorLocation {
-  double latitude = 1;
-  double longitude = 2;
-}
-
 // Request to add sensor
 message AddSensorRequest {
   string forest_id = 1;
   string name = 2;
-  SensorLocation location = 3;
+  double latitude = 3;
+  double longitude = 4;
 }
 
 // Response for add sensor

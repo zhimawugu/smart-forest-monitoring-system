@@ -3,6 +3,7 @@ package com.nci.forest.server.grpc;
 import com.nci.forest.proto.*;
 import com.nci.forest.server.service.SensorService;
 import com.nci.forest.server.service.TemperatureMonitoringService;
+import com.nci.forest.server.util.LocationValidator;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -25,9 +26,18 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
 
     @Override
     public void addSensor(AddSensorRequest request, StreamObserver<AddSensorResponse> responseObserver) {
-        try {
-            logger.info("gRPC: Adding sensor - {}", request.getName());
+        logger.info("gRPC: Adding sensor - {}", request.getName());
 
+        try {
+            // Validate location coordinates
+            String locationError = LocationValidator.validateCoordinates(request.getLatitude(), request.getLongitude());
+            if (locationError != null) {
+                logger.warn("AddSensor validation failed: {}", locationError);
+                responseObserver.onError(new IllegalArgumentException(locationError));
+                return;
+            }
+
+            // Call service to add sensor
             AddSensorResponse response = sensorService.addSensor(request);
 
             responseObserver.onNext(response);

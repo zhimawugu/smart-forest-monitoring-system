@@ -22,20 +22,15 @@ service ForestService {
 message Forest {
   string id = 1;              // Forest ID
   string name = 2;            // Forest name
-  Location location = 3;      // Geographic location
-}
-
-// Geographic location
-message Location {
-  double latitude = 1;        // Latitude
-  double longitude = 2;       // Longitude
-  string address = 3;         // Address description (optional)
+  double latitude = 3;        // Latitude
+  double longitude = 4;       // Longitude
 }
 
 // Add forest request
 message AddForestRequest {
   string name = 1;            // Forest name
-  Location location = 2;      // Geographic location
+  double latitude = 2;        // Latitude
+  double longitude = 3;       // Longitude
 }
 
 // Add forest response
