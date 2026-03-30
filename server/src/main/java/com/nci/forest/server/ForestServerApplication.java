@@ -13,4 +13,3 @@ public class ForestServerApplication {
         SpringApplication.run(ForestServerApplication.class, args);
     }
 }
-

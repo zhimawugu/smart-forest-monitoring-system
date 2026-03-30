@@ -83,7 +83,7 @@ service SensorService {
   // List all sensors in a forest
   rpc ListSensors(ListSensorsRequest) returns (ListSensorsResponse);
 
-  // Stream temperature data from client to server
-  rpc StreamTemperatureData(stream TemperatureData) returns (Empty);
+  // Stream temperature data from server to client (server-side streaming)
+  rpc StreamTemperatureData(StreamTemperatureRequest) returns (stream TemperatureData);
 }
 

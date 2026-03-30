@@ -73,4 +73,3 @@ public class ForestModel {
         return name.get();
     }
 }
-

@@ -85,5 +85,3 @@ public class SensorModel {
         return name.get();
     }
 }
-
-

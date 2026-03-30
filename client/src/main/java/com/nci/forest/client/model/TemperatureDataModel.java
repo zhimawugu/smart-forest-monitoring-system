@@ -69,4 +69,3 @@ public class TemperatureDataModel {
         return timestamp.get();
     }
 }
-

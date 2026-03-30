@@ -2,8 +2,9 @@ package com.nci.forest.server.grpc;
 
 import com.nci.forest.proto.*;
 import com.nci.forest.server.service.SensorService;
-import com.nci.forest.server.service.TemperatureMonitoringService;
 import com.nci.forest.server.util.LocationValidator;
+import io.grpc.Context;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -21,14 +22,34 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
     @Autowired
     private SensorService sensorService;
 
+
     @Autowired
-    private TemperatureMonitoringService temperatureMonitoringService;
+    private com.nci.forest.server.service.TemperatureSimulatorService temperatureSimulatorService;
 
     @Override
     public void addSensor(AddSensorRequest request, StreamObserver<AddSensorResponse> responseObserver) {
         logger.info("gRPC: Adding sensor - {}", request.getName());
 
         try {
+
+            // Set up cancellation handler to detect when client cancels
+            Context.current().addListener(context -> {
+                logger.warn("CANCELLATION DETECTED for addSensor request");
+            }, java.util.concurrent.Executors.newSingleThreadExecutor());
+
+            // Check deadline - return error if already exceeded
+            if (Context.current().getDeadline() != null) {
+                long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (timeRemainingMs <= 0) {
+                    logger.warn("Deadline exceeded before processing");
+                    responseObserver.onError(
+                        Status.DEADLINE_EXCEEDED.withDescription("Request deadline exceeded").asException()
+                    );
+                    return;
+                }
+                logger.info("Sensor request has {} ms remaining", timeRemainingMs);
+            }
+
             // Validate location coordinates
             String locationError = LocationValidator.validateCoordinates(request.getLatitude(), request.getLongitude());
             if (locationError != null) {
@@ -79,36 +100,80 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
     }
 
     @Override
-    public StreamObserver<TemperatureData> streamTemperatureData(
-            StreamObserver<com.nci.forest.proto.Empty> responseObserver) {
-        logger.info("gRPC: Client connected for streaming temperature data");
+    public void streamTemperatureData(StreamTemperatureRequest request, 
+                                     StreamObserver<TemperatureData> responseObserver) {
+        String sensorId = request.getSensorId();
+        String forestId = request.getForestId();
+        
+        logger.info("gRPC: Client requesting temperature stream for sensor: {}", sensorId);
 
-        return new StreamObserver<TemperatureData>() {
-            @Override
-            public void onNext(TemperatureData temperatureData) {
-                try {
-                    logger.debug("Received temperature data from client: sensor={}, temp={}",
-                               temperatureData.getSensorId(), temperatureData.getTemperature());
+        try {
 
-                    // Record the temperature data and trigger alerts
-                    temperatureMonitoringService.recordTemperatureData(temperatureData);
+            // Set up cancellation handler to detect when client cancels the stream
+            Context.current().addListener(context -> {
+                logger.warn("CANCELLATION DETECTED for temperature stream");
+                temperatureSimulatorService.unsubscribe(sensorId, null);
+            }, java.util.concurrent.Executors.newSingleThreadExecutor());
 
-                } catch (Exception e) {
-                    logger.error("Error processing temperature data: {}", e.getMessage());
+            // Get sensor details
+            ListSensorsRequest listRequest = ListSensorsRequest.newBuilder()
+                    .setForestId(forestId)
+                    .build();
+            ListSensorsResponse sensors = sensorService.listSensors(listRequest);
+            
+            // Find the sensor with matching ID
+            String sensorName = null;
+            for (Sensor sensor : sensors.getSensorsList()) {
+                if (sensor.getId().equals(sensorId)) {
+                    sensorName = sensor.getName();
+                    break;
                 }
             }
 
-            @Override
-            public void onError(Throwable t) {
-                logger.error("Error in temperature streaming: {}", t.getMessage());
+            if (sensorName == null) {
+                logger.warn("Sensor not found: {}", sensorId);
+                responseObserver.onError(
+                    Status.NOT_FOUND.withDescription("Sensor not found").asException()
+                );
+                return;
             }
 
-            @Override
-            public void onCompleted() {
-                logger.info("Temperature streaming completed");
-                responseObserver.onCompleted();
-            }
-        };
+            // Create a callback that will be invoked for each temperature data point
+            temperatureSimulatorService.subscribe(sensorId, sensorName, forestId, temperatureData -> {
+                try {
+
+                    // Check deadline
+                    if (Context.current().getDeadline() != null) {
+                        long timeRemainingMs = Context.current().getDeadline()
+                                .timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
+                        if (timeRemainingMs <= 0) {
+                            logger.warn("Deadline exceeded for sensor stream: {}", sensorId);
+                            responseObserver.onError(
+                                Status.DEADLINE_EXCEEDED.withDescription("Stream deadline exceeded").asException()
+                            );
+                            return;
+                        }
+                    }
+
+                    // Send temperature data to client
+                    responseObserver.onNext(temperatureData);
+                    logger.debug("Sent temperature data to client: sensor={}, temp={}°C",
+                               sensorId, temperatureData.getTemperature());
+
+                } catch (Exception e) {
+                    logger.error("Error sending temperature data: {}", e.getMessage());
+                }
+            });
+
+            // Register a listener to unsubscribe when stream completes or errors
+            Context.current().addListener(context -> {
+                logger.info("Temperature stream context ended for sensor: {}", sensorId);
+                temperatureSimulatorService.unsubscribe(sensorId, null);
+            }, java.util.concurrent.Executors.newSingleThreadExecutor());
+
+        } catch (Exception e) {
+            logger.error("Error in temperature stream for sensor: {}", sensorId, e);
+            responseObserver.onError(e);
+        }
     }
 }
-

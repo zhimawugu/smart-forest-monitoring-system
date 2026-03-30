@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
 <TabPane xmlns="http://javafx.com/javafx"
          xmlns:fx="http://javafx.com/fxml"
-         fx:controller="com.nci.forest.client.controller.MainController"
          prefHeight="600.0" prefWidth="900.0">
 
     <!-- Forest Management Tab -->
@@ -30,4 +28,3 @@
     </Tab>
 
 </TabPane>
-

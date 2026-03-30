@@ -8,10 +8,7 @@ import com.nci.forest.proto.AlertEvent;
 import com.nci.forest.proto.Sensor;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,7 +168,7 @@ public class AlertManagementController {
                         for (Sensor sensor : sensors) {
                             SensorModel sensorModel = new SensorModel(
                                     sensor.getId(),
-                                    sensor.getName() + " (" + forest.getName() + ")",  // 显示传感器名和森林名
+                                    sensor.getName() + " (" + forest.getName() + ")",  // show sensor name and forest name
                                     sensor.getForestId(),
                                     sensor.getLatitude(),
                                     sensor.getLongitude(),
@@ -460,8 +457,6 @@ public class AlertManagementController {
         }
     }
 }
-
-
 
 
 

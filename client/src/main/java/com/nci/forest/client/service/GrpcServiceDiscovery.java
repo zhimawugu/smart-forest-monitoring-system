@@ -12,8 +12,6 @@ import java.io.IOException;
 public final class GrpcServiceDiscovery {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcServiceDiscovery.class);
-
-    private static final String DEFAULT_SERVICE_TYPE = "_forest-grpc._tcp.local.";
     private static final String DEFAULT_HOST = "localhost";
     private static final int DEFAULT_PORT = 50051;
     private static final int DEFAULT_TIMEOUT_MS = 1200;
@@ -21,17 +19,11 @@ public final class GrpcServiceDiscovery {
     private GrpcServiceDiscovery() {
     }
 
-    public static Endpoint resolve() {
-        String hostOverride = System.getProperty("grpc.host");
-        String portOverride = System.getProperty("grpc.port");
-        if (hostOverride != null && !hostOverride.isBlank()) {
-            int port = parsePort(portOverride, DEFAULT_PORT);
-            logger.info("Using endpoint from system properties: {}:{}", hostOverride, port);
-            return new Endpoint(hostOverride, port);
-        }
-
-        String serviceType = System.getProperty("grpc.mdns.serviceType", DEFAULT_SERVICE_TYPE);
-        int timeoutMs = parseTimeout(System.getProperty("grpc.mdns.timeoutMs"));
+    /**
+     * Resolve gRPC endpoint with custom service type
+     */
+    public static Endpoint resolve(String serviceType) {
+        int timeoutMs = DEFAULT_TIMEOUT_MS;
 
         try (JmDNS jmdns = JmDNS.create()) {
             javax.jmdns.ServiceInfo[] services = jmdns.list(serviceType, timeoutMs);
@@ -55,22 +47,6 @@ public final class GrpcServiceDiscovery {
         return new Endpoint(DEFAULT_HOST, DEFAULT_PORT);
     }
 
-    private static int parsePort(String portText, int fallback) {
-        try {
-            return portText == null ? fallback : Integer.parseInt(portText);
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
-    private static int parseTimeout(String timeoutText) {
-        try {
-            return timeoutText == null ? DEFAULT_TIMEOUT_MS : Integer.parseInt(timeoutText);
-        } catch (NumberFormatException ex) {
-            return DEFAULT_TIMEOUT_MS;
-        }
-    }
-
     public static final class Endpoint {
         private final String host;
         private final int port;
@@ -89,5 +65,3 @@ public final class GrpcServiceDiscovery {
         }
     }
 }
-
-

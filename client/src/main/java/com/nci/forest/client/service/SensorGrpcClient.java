@@ -18,21 +18,14 @@ public class SensorGrpcClient {
 
     private static final Logger logger = LoggerFactory.getLogger(SensorGrpcClient.class);
     private static final long DEFAULT_DEADLINE_SECONDS = 30;
+    private static final String SERVICE_TYPE = "_forest-grpc._tcp.local.";
 
     private final ManagedChannel channel;
     private final SensorServiceGrpc.SensorServiceBlockingStub blockingStub;
     private long deadlineSeconds = DEFAULT_DEADLINE_SECONDS;
 
-    public SensorGrpcClient(String host, int port) {
-        this.channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
-        this.blockingStub = SensorServiceGrpc.newBlockingStub(channel);
-        logger.info("Sensor gRPC client connected to {}:{}", host, port);
-    }
-
     public SensorGrpcClient() {
-        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve(SERVICE_TYPE);
         this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
                 .usePlaintext()
                 .build();
@@ -55,12 +48,23 @@ public class SensorGrpcClient {
                     .setLongitude(longitude)
                     .build();
 
+            // Set deadline for the request - automatically times out after specified seconds
             SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
                 blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             AddSensorResponse response = stubWithDeadline.addSensor(request);
             logger.info("Sensor added successfully: {}", response.getSensor().getId());
             return response;
-        } catch (Exception e) {
+        } catch (io.grpc.StatusRuntimeException e) {
+            // Check if error was due to deadline exceeded
+            if (e.getStatus() == io.grpc.Status.DEADLINE_EXCEEDED) {
+                logger.warn("AddSensor request exceeded deadline of " + deadlineSeconds + " seconds");
+                throw new RuntimeException("Request timeout: exceeded " + deadlineSeconds + " seconds", e);
+            }
+            // Check if error was due to cancellation
+            if (e.getStatus() == io.grpc.Status.CANCELLED) {
+                logger.warn("AddSensor request was cancelled");
+                throw new RuntimeException("Request was cancelled", e);
+            }
             logger.error("Error adding sensor", e);
             throw new RuntimeException("Failed to add sensor: " + e.getMessage(), e);
         }
@@ -122,4 +126,3 @@ public class SensorGrpcClient {
         logger.info("Sensor gRPC client shutdown");
     }
 }
-

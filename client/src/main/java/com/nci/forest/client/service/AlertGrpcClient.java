@@ -17,6 +17,7 @@ public class AlertGrpcClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AlertGrpcClient.class);
     private static final long DEFAULT_DEADLINE_SECONDS = 30;
+    private static final String SERVICE_TYPE = "_forest-grpc._tcp.local.";
 
     private final ManagedChannel channel;
     private final AlertServiceGrpc.AlertServiceStub asyncStub;
@@ -31,16 +32,8 @@ public class AlertGrpcClient {
         void onCompleted();
     }
 
-    public AlertGrpcClient(String host, int port) {
-        this.channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
-        this.asyncStub = AlertServiceGrpc.newStub(channel);
-        logger.info("Alert gRPC client created for {}:{}", host, port);
-    }
-
     public AlertGrpcClient() {
-        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve();
+        GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve(SERVICE_TYPE);
         this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
                 .usePlaintext()
                 .build();
@@ -68,6 +61,15 @@ public class AlertGrpcClient {
 
             @Override
             public void onError(Throwable t) {
+                // Check if error was due to deadline exceeded
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    io.grpc.StatusRuntimeException e = (io.grpc.StatusRuntimeException) t;
+                    if (e.getStatus() == io.grpc.Status.DEADLINE_EXCEEDED) {
+                        logger.error("Alert watch stream exceeded deadline of {} seconds", deadlineSeconds);
+                    } else if (e.getStatus() == io.grpc.Status.CANCELLED) {
+                        logger.info("Alert watch stream was cancelled");
+                    }
+                }
                 logger.error("Alert watch stream error: {}", t.getMessage());
                 if (callback != null) {
                     callback.onError(t);
@@ -83,11 +85,18 @@ public class AlertGrpcClient {
             }
         };
 
-        // Create bidirectional stream and store request observer
-        AlertServiceGrpc.AlertServiceStub asyncStubWithDeadline = 
-            asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
-        this.requestObserver = asyncStubWithDeadline.watchAlerts(responseObserver);
-        logger.info("Alert watch stream established");
+        try {
+            // Create bidirectional stream with deadline and store request observer
+            AlertServiceGrpc.AlertServiceStub asyncStubWithDeadline = 
+                asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            this.requestObserver = asyncStubWithDeadline.watchAlerts(responseObserver);
+            logger.info("Alert watch stream established with {} second deadline", deadlineSeconds);
+        } catch (io.grpc.StatusRuntimeException e) {
+            logger.error("Failed to establish alert watch stream: {}", e.getMessage());
+            if (callback != null) {
+                callback.onError(e);
+            }
+        }
     }
 
     /**
@@ -142,5 +151,3 @@ public class AlertGrpcClient {
         return requestObserver != null && !channel.isShutdown();
     }
 }
-
-

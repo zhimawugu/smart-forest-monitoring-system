@@ -2,6 +2,7 @@ package com.nci.forest.server.grpc;
 
 import com.nci.forest.proto.*;
 import com.nci.forest.server.service.AlertService;
+import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -24,42 +25,58 @@ public class AlertServiceImpl extends AlertServiceGrpc.AlertServiceImplBase {
 
     @Override
     public StreamObserver<AlertMessage> watchAlerts(StreamObserver<AlertEvent> responseObserver) {
-        // Generate a unique client ID
+        // Generate a unique client ID for internal management
         String clientId = UUID.randomUUID().toString();
-        logger.info("gRPC: Client {} connected to watch alerts", clientId);
-
+        
         // Register this client's observer
         alertService.watchAlerts(clientId, responseObserver);
 
+        // Set up cancellation handler
+        Context.current().addListener(context -> {
+            logger.warn("Alert Service api cancellation detected");
+            alertService.unregisterClient(clientId);
+        }, java.util.concurrent.Executors.newSingleThreadExecutor());
+
         // Return a StreamObserver to handle incoming messages from client
-        return new StreamObserver<>() {
+        return new StreamObserver<AlertMessage>() {
             @Override
             public void onNext(AlertMessage message) {
                 try {
+                    // Check deadline
+                    if (Context.current().getDeadline() != null) {
+                        long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
+                        if (timeRemainingMs <= 0) {
+                            logger.warn("Alert stream deadline exceeded");
+                            responseObserver.onError(io.grpc.Status.DEADLINE_EXCEEDED
+                                    .withDescription("Alert stream deadline exceeded")
+                                    .asException());
+                            return;
+                        }
+                    }
+
                     // Process SetAlertRequest
                     if (message.hasSetAlert()) {
                         SetAlertRequest request = message.getSetAlert();
-                        logger.info("gRPC: Received SetAlertRequest for sensor: {}", request.getSensorId());
+                        logger.info("Received SetAlertRequest for sensor: {}", request.getSensorId());
                         alertService.setAlertThreshold(request);
                     }
                 } catch (Exception e) {
-                    logger.error("Error processing alert message from client {}: {}", clientId, e.getMessage());
+                    logger.error("Error processing alert message: {}", e.getMessage());
                 }
             }
 
             @Override
             public void onError(Throwable t) {
-                logger.error("Error in watch alerts stream for client {}: {}", clientId, t.getMessage());
+                logger.error("Alert watch stream error: {}", t.getMessage());
                 alertService.unregisterClient(clientId);
             }
 
             @Override
             public void onCompleted() {
-                logger.info("Client {} closed alert watch stream", clientId);
+                logger.info("Alert watch stream closed");
                 alertService.unregisterClient(clientId);
                 responseObserver.onCompleted();
             }
         };
     }
 }
-

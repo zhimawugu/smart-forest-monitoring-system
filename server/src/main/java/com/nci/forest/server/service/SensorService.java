@@ -104,28 +104,4 @@ public class SensorService {
                 .setTotal(sensors.size())
                 .build();
     }
-
-    /**
-     * Store incoming temperature data
-     */
-    public void storeTemperatureData(TemperatureData data) {
-        logger.debug("Storing temperature data for sensor: {}", data.getSensorId());
-
-        List<TemperatureData> dataList = temperatureData
-                .computeIfAbsent(data.getSensorId(), k -> new ArrayList<>());
-
-        // Keep only last 100 readings
-        dataList.add(data);
-        if (dataList.size() > 100) {
-            dataList.remove(0);
-        }
-    }
-
-    /**
-     * Get latest temperature data for sensor
-     */
-    public List<TemperatureData> getTemperatureData(String sensorId) {
-        return new ArrayList<>(temperatureData.getOrDefault(sensorId, new ArrayList<>()));
-    }
 }
-

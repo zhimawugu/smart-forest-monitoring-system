@@ -2,6 +2,8 @@ package com.nci.forest.server.grpc;
 
 import com.nci.forest.proto.*;
 import com.nci.forest.server.util.LocationValidator;
+import io.grpc.Context;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -26,6 +28,20 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
         logger.info("Received AddForest request: name={}", request.getName());
 
         try {
+
+            // Check deadline - return error if already exceeded
+            if (Context.current().getDeadline() != null) {
+                long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (timeRemainingMs <= 0) {
+                    logger.warn("Deadline exceeded before processing");
+                    responseObserver.onError(
+                        Status.DEADLINE_EXCEEDED.withDescription("Request deadline exceeded").asException()
+                    );
+                    return;
+                }
+                logger.info("Request has {} ms remaining", timeRemainingMs);
+            }
+
             // Validate request - name
             if (request.getName() == null || request.getName().isEmpty()) {
                 String errorMsg = "Forest name cannot be empty";

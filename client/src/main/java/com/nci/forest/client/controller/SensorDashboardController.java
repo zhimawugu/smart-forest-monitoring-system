@@ -1,11 +1,9 @@
 package com.nci.forest.client.controller;
 
 import com.nci.forest.client.model.SensorModel;
-import com.nci.forest.client.model.SensorModel;
 import com.nci.forest.client.model.TemperatureDataModel;
 import com.nci.forest.client.service.ForestGrpcClient;
 import com.nci.forest.client.service.SensorGrpcClient;
-import com.nci.forest.client.service.TemperatureSimulator;
 import com.nci.forest.client.service.TemperatureDataStreamClient;
 import com.nci.forest.proto.Forest;
 import com.nci.forest.proto.Sensor;
@@ -63,7 +61,6 @@ public class SensorDashboardController {
     private SensorGrpcClient sensorGrpcClient;
     private ForestGrpcClient forestGrpcClient;
     private TemperatureDataStreamClient temperatureStreamClient;
-    private TemperatureSimulator currentSimulator;
     private SensorModel selectedSensor;
     private final List<TemperatureDataModel> temperatureDataList = new ArrayList<>();
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -76,7 +73,6 @@ public class SensorDashboardController {
         sensorGrpcClient = new SensorGrpcClient();
         forestGrpcClient = new ForestGrpcClient();
         temperatureStreamClient = new TemperatureDataStreamClient();
-        temperatureStreamClient.startStreaming();
 
         // Setup table columns
         timeColumn.setCellValueFactory(cellData -> cellData.getValue().timestampProperty());
@@ -151,16 +147,11 @@ public class SensorDashboardController {
             return;
         }
 
-        // Stop previous simulator if any
-        if (currentSimulator != null) {
-            currentSimulator.stop();
-        }
-
         // Clear previous data
         temperatureDataList.clear();
         temperatureTable.refresh();
 
-        // Start new simulator for selected sensor
+        // Start new stream for selected sensor
         startTemperatureStream();
 
         statusLabel.setText("Connected to: " + selectedSensor.getName());
@@ -170,31 +161,13 @@ public class SensorDashboardController {
      * Start streaming temperature data from selected sensor
      */
     private void startTemperatureStream() {
-        currentSimulator = new TemperatureSimulator(
+        // Request temperature stream from server
+        temperatureStreamClient.startStreamingTemperatureData(
                 selectedSensor.getId(),
-                selectedSensor.getName(),
                 selectedSensor.getForestId(),
-                this::onTemperatureDataReceived,
-                new io.grpc.stub.StreamObserver<TemperatureData>() {
-                    @Override
-                    public void onNext(TemperatureData value) {
-                        // Temperature data is sent from simulator
-                        temperatureStreamClient.sendTemperatureData(value);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        logger.error("Error in temperature stream observer: {}", t.getMessage());
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        logger.info("Temperature stream observer completed");
-                    }
-                }
+                this::onTemperatureDataReceived
         );
 
-        currentSimulator.start();
         logger.info("Started temperature stream for sensor: {}", selectedSensor.getName());
     }
 
@@ -285,9 +258,6 @@ public class SensorDashboardController {
      * Cleanup on close
      */
     public void cleanup() {
-        if (currentSimulator != null) {
-            currentSimulator.stop();
-        }
         try {
             if (sensorGrpcClient != null) {
                 sensorGrpcClient.shutdown();
@@ -297,6 +267,3 @@ public class SensorDashboardController {
         }
     }
 }
-
-
-
