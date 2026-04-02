@@ -8,6 +8,7 @@ import com.nci.forest.client.service.TemperatureDataStreamClient;
 import com.nci.forest.proto.Forest;
 import com.nci.forest.proto.Sensor;
 import com.nci.forest.proto.TemperatureData;
+import io.grpc.Context;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -58,17 +59,19 @@ public class SensorDashboardController {
     @FXML
     private Label statusLabel;
 
+    @FXML
+    private Button stopStreamButton;
+
     private SensorGrpcClient sensorGrpcClient;
     private ForestGrpcClient forestGrpcClient;
     private TemperatureDataStreamClient temperatureStreamClient;
+    private Context.CancellableContext currentStreamContext;
     private SensorModel selectedSensor;
     private final List<TemperatureDataModel> temperatureDataList = new ArrayList<>();
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     @FXML
     public void initialize() {
-        logger.info("Initializing Sensor Dashboard Controller");
-
         // Initialize gRPC clients
         sensorGrpcClient = new SensorGrpcClient();
         forestGrpcClient = new ForestGrpcClient();
@@ -89,8 +92,6 @@ public class SensorDashboardController {
     private void refreshSensorList() {
         new Thread(() -> {
             try {
-                logger.info("Refreshing sensor list");
-
                 // Get all forests
                 List<Forest> forests = forestGrpcClient.listForests();
                 List<SensorModel> allSensors = new ArrayList<>();
@@ -161,14 +162,47 @@ public class SensorDashboardController {
      * Start streaming temperature data from selected sensor
      */
     private void startTemperatureStream() {
-        // Request temperature stream from server
-        temperatureStreamClient.startStreamingTemperatureData(
+        // Cancel any existing stream
+        if (currentStreamContext != null) {
+            currentStreamContext.cancel(null);
+        }
+
+        // Request temperature stream from server and save context
+        currentStreamContext = temperatureStreamClient.startStreamingTemperatureData(
                 selectedSensor.getId(),
                 selectedSensor.getForestId(),
                 this::onTemperatureDataReceived
         );
 
-        logger.info("Started temperature stream for sensor: {}", selectedSensor.getName());
+        // Show stop button
+        if (stopStreamButton != null) {
+            stopStreamButton.setVisible(true);
+        }
+    }
+
+    /**
+     * Handle stop streaming button click
+     */
+    @FXML
+    private void handleStopStreaming() {
+        if (currentStreamContext != null) {
+            currentStreamContext.cancel(null);
+            currentStreamContext = null;
+
+            // Hide stop button
+            if (stopStreamButton != null) {
+                stopStreamButton.setVisible(false);
+            }
+
+            statusLabel.setText("Stream stopped");
+            
+            // Show alert
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Stream Stopped");
+            alert.setHeaderText(null);
+            alert.setContentText("Temperature streaming has been cancelled.");
+            alert.showAndWait();
+        }
     }
 
     /**
@@ -199,8 +233,6 @@ public class SensorDashboardController {
 
                 // Update statistics
                 updateStatistics();
-
-                logger.debug("Temperature received: {} °C", data.getTemperature());
             } catch (Exception e) {
                 logger.error("Error processing temperature data", e);
             }
@@ -245,25 +277,5 @@ public class SensorDashboardController {
     private void handleRefreshSensors() {
         refreshSensorList();
         statusLabel.setText("Sensors refreshed");
-    }
-
-    /**
-     * Add sensor to combo box
-     */
-    public void addSensorToList(SensorModel sensor) {
-        sensorComboBox.getItems().add(sensor);
-    }
-
-    /**
-     * Cleanup on close
-     */
-    public void cleanup() {
-        try {
-            if (sensorGrpcClient != null) {
-                sensorGrpcClient.shutdown();
-            }
-        } catch (Exception e) {
-            logger.error("Error shutting down gRPC client", e);
-        }
     }
 }

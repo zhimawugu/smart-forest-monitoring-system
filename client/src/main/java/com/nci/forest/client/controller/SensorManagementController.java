@@ -10,10 +10,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.GridPane;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -28,9 +25,6 @@ import java.util.Optional;
  * Handles adding and removing sensors for forests
  */
 public class SensorManagementController {
-
-    private static final Logger logger = LoggerFactory.getLogger(SensorManagementController.class);
-
     @FXML
     private ComboBox<ForestModel> forestComboBox;
 
@@ -65,8 +59,6 @@ public class SensorManagementController {
 
     @FXML
     public void initialize() {
-        logger.info("Initializing Sensor Management Controller");
-
         // Initialize gRPC clients
         forestGrpcClient = new ForestGrpcClient();
         sensorGrpcClient = new SensorGrpcClient();
@@ -118,8 +110,6 @@ public class SensorManagementController {
     private void loadForests() {
         new Thread(() -> {
             try {
-                logger.info("Loading forests...");
-
                 List<Forest> forests = forestGrpcClient.listForests();
 
                 Platform.runLater(() -> {
@@ -144,7 +134,6 @@ public class SensorManagementController {
                     }
                 });
             } catch (Exception e) {
-                logger.error("Error loading forests", e);
                 Platform.runLater(() -> statusLabel.setText("Error loading forests: " + e.getMessage()));
             }
         }).start();
@@ -172,8 +161,6 @@ public class SensorManagementController {
     private void loadSensorsForForest() {
         new Thread(() -> {
             try {
-                logger.info("Loading sensors for forest: {}", selectedForest.getId());
-
                 List<Sensor> sensors = sensorGrpcClient.listSensors(selectedForest.getId());
 
                 Platform.runLater(() -> {
@@ -199,7 +186,6 @@ public class SensorManagementController {
                     statusLabel.setText("Loaded " + sensors.size() + " sensor(s) for " + selectedForest.getName());
                 });
             } catch (Exception e) {
-                logger.error("Error loading sensors", e);
                 Platform.runLater(() -> statusLabel.setText("Error loading sensors: " + e.getMessage()));
             }
         }).start();
@@ -262,8 +248,6 @@ public class SensorManagementController {
                 // Add sensor in background thread
                 new Thread(() -> {
                     try {
-                        logger.info("Adding sensor: {} to forest: {}", name, selectedForest.getId());
-
                         sensorGrpcClient.addSensor(selectedForest.getId(), name, latitude, longitude);
 
                         Platform.runLater(() -> {
@@ -271,7 +255,6 @@ public class SensorManagementController {
                             loadSensorsForForest();
                         });
                     } catch (Exception e) {
-                        logger.error("Error adding sensor", e);
                         Platform.runLater(() -> {
                             statusLabel.setText("Error adding sensor: " + e.getMessage());
                             showAlert("Error", "Failed to add sensor: " + e.getMessage());
@@ -298,8 +281,6 @@ public class SensorManagementController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             new Thread(() -> {
                 try {
-                    logger.info("Deleting sensor: {}", sensor.getId());
-
                     sensorGrpcClient.removeSensor(sensor.getId());
 
                     Platform.runLater(() -> {
@@ -307,7 +288,6 @@ public class SensorManagementController {
                         loadSensorsForForest();
                     });
                 } catch (Exception e) {
-                    logger.error("Error deleting sensor", e);
                     Platform.runLater(() -> {
                         statusLabel.setText("Error deleting sensor: " + e.getMessage());
                         showAlert("Error", "Failed to delete sensor: " + e.getMessage());
@@ -339,22 +319,5 @@ public class SensorManagementController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-
-    /**
-     * Cleanup resources
-     */
-    public void cleanup() {
-        try {
-            if (forestGrpcClient != null) {
-                forestGrpcClient.shutdown();
-            }
-            if (sensorGrpcClient != null) {
-                sensorGrpcClient.shutdown();
-            }
-        } catch (Exception e) {
-            logger.error("Error during cleanup", e);
-        }
-    }
 }
-
 

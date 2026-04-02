@@ -7,10 +7,9 @@ import javax.jmdns.JmDNS;
 import java.io.IOException;
 
 /**
- * Resolves the gRPC endpoint through mDNS with fallback to localhost.
+ * Resolves the gRPC endpoint through jmDNS
  */
 public final class GrpcServiceDiscovery {
-
     private static final Logger logger = LoggerFactory.getLogger(GrpcServiceDiscovery.class);
     private static final String DEFAULT_HOST = "localhost";
     private static final int DEFAULT_PORT = 50051;
@@ -23,22 +22,17 @@ public final class GrpcServiceDiscovery {
      * Resolve gRPC endpoint with custom service type
      */
     public static Endpoint resolve(String serviceType) {
-        int timeoutMs = DEFAULT_TIMEOUT_MS;
-
         try (JmDNS jmdns = JmDNS.create()) {
-            javax.jmdns.ServiceInfo[] services = jmdns.list(serviceType, timeoutMs);
+            javax.jmdns.ServiceInfo[] services = jmdns.list(serviceType, DEFAULT_TIMEOUT_MS);
             if (services.length > 0) {
                 javax.jmdns.ServiceInfo serviceInfo = services[0];
                 String[] hosts = serviceInfo.getHostAddresses();
                 String host = hosts.length > 0 ? hosts[0] : serviceInfo.getServer();
                 int port = serviceInfo.getPort();
                 if (host != null && !host.isBlank() && port > 0) {
-                    logger.info("Discovered gRPC endpoint via mDNS: {}:{}", host, port);
                     return new Endpoint(host, port);
                 }
             }
-            logger.info("No mDNS gRPC service discovered for type={}, fallback to {}:{}",
-                    serviceType, DEFAULT_HOST, DEFAULT_PORT);
         } catch (IOException e) {
             logger.warn("mDNS discovery failed, fallback to {}:{} - {}",
                     DEFAULT_HOST, DEFAULT_PORT, e.getMessage());

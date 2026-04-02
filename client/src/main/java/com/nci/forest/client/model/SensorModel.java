@@ -43,11 +43,6 @@ public class SensorModel {
         return name.get();
     }
 
-    // Forest ID property
-    public StringProperty forestIdProperty() {
-        return forestId;
-    }
-
     public String getForestId() {
         return forestId.get();
     }
@@ -57,26 +52,14 @@ public class SensorModel {
         return latitude;
     }
 
-    public double getLatitude() {
-        return latitude.get();
-    }
-
     // Longitude property
     public DoubleProperty longitudeProperty() {
         return longitude;
     }
 
-    public double getLongitude() {
-        return longitude.get();
-    }
-
     // Created At property
     public StringProperty createdAtProperty() {
         return createdAt;
-    }
-
-    public String getCreatedAt() {
-        return createdAt.get();
     }
 
     // Override toString to display Sensor name in ComboBox

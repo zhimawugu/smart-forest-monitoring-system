@@ -1,8 +1,6 @@
 package com.nci.forest.server.service;
 
 import com.nci.forest.proto.*;
-import com.nci.forest.server.util.LocationValidator;
-import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,15 +19,10 @@ public class SensorService {
     // In-memory storage for sensors (forest_id -> list of sensors)
     private final Map<String, List<Sensor>> sensorsByForest = new ConcurrentHashMap<>();
 
-    // Temperature data storage (sensor_id -> list of latest temperatures)
-    private final Map<String, List<TemperatureData>> temperatureData = new ConcurrentHashMap<>();
-
     /**
      * Add sensor to forest
      */
     public AddSensorResponse addSensor(AddSensorRequest request) {
-        logger.info("Adding sensor to forest: {}", request.getForestId());
-
         String sensorId = UUID.randomUUID().toString();
 
         Sensor sensor = Sensor.newBuilder()
@@ -45,10 +38,6 @@ public class SensorService {
                 .computeIfAbsent(request.getForestId(), k -> new ArrayList<>())
                 .add(sensor);
 
-        temperatureData.put(sensorId, new ArrayList<>());
-
-        logger.info("Sensor added successfully: {}", sensorId);
-
         return AddSensorResponse.newBuilder()
                 .setSuccess(true)
                 .setMessage("Sensor added successfully")
@@ -60,8 +49,6 @@ public class SensorService {
      * Remove sensor from forest
      */
     public RemoveSensorResponse removeSensor(RemoveSensorRequest request) {
-        logger.info("Removing sensor: {}", request.getSensorId());
-
         String sensorId = request.getSensorId();
 
         // Find and remove sensor from all forests
@@ -72,9 +59,6 @@ public class SensorService {
                 break;
             }
         }
-
-        // Remove temperature data
-        temperatureData.remove(sensorId);
 
         if (found) {
             logger.info("Sensor removed successfully: {}", sensorId);
@@ -95,8 +79,6 @@ public class SensorService {
      * List all sensors in a forest
      */
     public ListSensorsResponse listSensors(ListSensorsRequest request) {
-        logger.info("Listing sensors for forest: {}", request.getForestId());
-
         List<Sensor> sensors = sensorsByForest.getOrDefault(request.getForestId(), new ArrayList<>());
 
         return ListSensorsResponse.newBuilder()

@@ -25,40 +25,27 @@ public class AlertService {
     private final ConcurrentHashMap<String, StreamObserver<AlertEvent>> alertObservers = new ConcurrentHashMap<>();
 
     /**
-     * Register client observer and handle incoming alert messages
+     * Register client observer
      */
     public void watchAlerts(String clientId, StreamObserver<AlertEvent> responseObserver) {
-        logger.info("Client {} watching alerts", clientId);
-
-        // Store the observer for this client
         alertObservers.put(clientId, responseObserver);
-        logger.info("Total active alert observers: {}", alertObservers.size());
     }
 
     /**
      * Process SetAlertRequest from client
      */
     public void setAlertThreshold(SetAlertRequest request) {
-        String sensorId = request.getSensorId();
-        double maxTemp = request.getMaxTemperature();
-
-        logger.info("Setting alert threshold for sensor {}: max={}", sensorId, maxTemp);
-
-        // Store the alert configuration
         AlertConfig config = AlertConfig.newBuilder()
-                .setSensorId(sensorId)
-                .setMaxTemperature(maxTemp)
+                .setSensorId(request.getSensorId())
+                .setMaxTemperature(request.getMaxTemperature())
                 .build();
-
-        alertConfigs.put(sensorId, config);
-        logger.info("Alert config stored. Total configs: {}", alertConfigs.size());
+        alertConfigs.put(request.getSensorId(), config);
     }
 
     /**
      * Unregister client observer
      */
     public void unregisterClient(String clientId) {
-        logger.info("Client {} unregistered from alerts", clientId);
         alertObservers.remove(clientId);
     }
 
@@ -67,23 +54,14 @@ public class AlertService {
      */
     public void checkAndTriggerAlert(String sensorId, String sensorName, String forestId,
                                      double currentTemperature) {
-        logger.debug("Checking alert for sensor {}: temp={}", sensorId, currentTemperature);
-
         AlertConfig config = alertConfigs.get(sensorId);
         if (config == null) {
-            // No alert configured for this sensor
-            logger.debug("No alert config found for sensor: {}", sensorId);
             return;
         }
 
-        logger.debug("Alert config found for sensor {}: maxTemp={}", sensorId, config.getMaxTemperature());
-
-        // Only check if temperature exceeds max threshold
         if (currentTemperature > config.getMaxTemperature()) {
-            // Create alert event
-            String alertId = UUID.randomUUID().toString();
             AlertEvent alertEvent = AlertEvent.newBuilder()
-                    .setAlertId(alertId)
+                    .setAlertId(UUID.randomUUID().toString())
                     .setSensorId(sensorId)
                     .setSensorName(sensorName)
                     .setForestId(forestId)
@@ -93,15 +71,9 @@ public class AlertService {
                     .setAlertType("OVER_TEMP")
                     .build();
 
-            logger.warn("Alert triggered: sensor={}, type=OVER_TEMP, temp={}, threshold={}",
-                       sensorId, currentTemperature, config.getMaxTemperature());
-
-            // Push alert to all connected clients
-            logger.info("Pushing alert to {} connected clients", alertObservers.size());
             for (Map.Entry<String, StreamObserver<AlertEvent>> entry : alertObservers.entrySet()) {
                 try {
                     entry.getValue().onNext(alertEvent);
-                    logger.info("Alert sent to client: {}", entry.getKey());
                 } catch (Exception e) {
                     logger.error("Failed to send alert to client {}: {}", entry.getKey(), e.getMessage());
                     alertObservers.remove(entry.getKey());

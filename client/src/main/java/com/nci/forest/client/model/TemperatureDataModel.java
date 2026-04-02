@@ -24,31 +24,9 @@ public class TemperatureDataModel {
         this.timestamp = new SimpleStringProperty(timestamp);
     }
 
-    // Sensor ID property
-    public StringProperty sensorIdProperty() {
-        return sensorId;
-    }
-
-    public String getSensorId() {
-        return sensorId.get();
-    }
-
     // Sensor Name property
     public StringProperty sensorNameProperty() {
         return sensorName;
-    }
-
-    public String getSensorName() {
-        return sensorName.get();
-    }
-
-    // Forest ID property
-    public StringProperty forestIdProperty() {
-        return forestId;
-    }
-
-    public String getForestId() {
-        return forestId.get();
     }
 
     // Temperature property

@@ -17,11 +17,14 @@
     </Label>
 
     <!-- Sensor Selection and Controls -->
-    <HBox spacing="10">
+    <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Select Sensor:" style="-fx-font-size: 12px;"/>
         <ComboBox fx:id="sensorComboBox" prefWidth="200" onAction="#handleSensorSelection"/>
         <Button text="Refresh Sensors" onAction="#handleRefreshSensors"
                 style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+        <Button fx:id="stopStreamButton" text="Stop Streaming" onAction="#handleStopStreaming"
+                style="-fx-background-color: #f44336; -fx-text-fill: white;"
+                visible="false"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Label fx:id="statusLabel" text="No sensor selected" style="-fx-text-fill: #999;"/>
     </HBox>

@@ -21,51 +21,25 @@ public class ForestModel {
         this.address = new SimpleStringProperty(address);
     }
 
-    // ID property
-    public StringProperty idProperty() {
-        return id;
-    }
-
     public String getId() {
         return id.get();
-    }
-
-    // Name property
-    public StringProperty nameProperty() {
-        return name;
     }
 
     public String getName() {
         return name.get();
     }
 
-    // Latitude property
-    public StringProperty latitudeProperty() {
-        return latitude;
-    }
-
     public String getLatitude() {
         return latitude.get();
-    }
-
-    // Longitude property
-    public StringProperty longitudeProperty() {
-        return longitude;
     }
 
     public String getLongitude() {
         return longitude.get();
     }
 
-    // Address property
-    public StringProperty addressProperty() {
-        return address;
-    }
-
     public String getAddress() {
         return address.get();
     }
-
 
     // Override toString to display Forest name in ComboBox
     @Override

@@ -73,8 +73,6 @@ public class AlertManagementController {
 
     @FXML
     public void initialize() {
-        logger.info("Initializing Alert Management Controller");
-
         // Initialize gRPC clients
         sensorGrpcClient = new SensorGrpcClient();
         forestGrpcClient = new ForestGrpcClient();
@@ -90,7 +88,7 @@ public class AlertManagementController {
         // Initialize spinner (only max temperature)
         SpinnerValueFactory<Integer> maxSpinnerFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 30);
         maxTempSpinner.setValueFactory(maxSpinnerFactory);
-        maxTempSpinner.setEditable(true);  // Allow direct input
+        maxTempSpinner.setEditable(true);
 
         // Add text formatter to handle editable input properly
         maxTempSpinner.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
@@ -126,8 +124,6 @@ public class AlertManagementController {
     private void setupSensorComboBox() {
         new Thread(() -> {
             try {
-                logger.info("Loading sensors for alert management");
-
                 Platform.runLater(() -> {
                     sensorComboBox.getItems().clear();
                     connectionStatusLabel.setText("Loading sensors...");
@@ -136,18 +132,15 @@ public class AlertManagementController {
 
                 sensorMap.clear();
 
-                // Get all forests
-                List<com.nci.forest.proto.Forest> forests = null;
+                List<com.nci.forest.proto.Forest> forests;
                 try {
                     forests = forestGrpcClient.listForests();
-                    logger.info("Found {} forests", forests.size());
                 } catch (Exception e) {
                     logger.error("Failed to load forests: {}", e.getMessage());
                     forests = new ArrayList<>();
                 }
 
                 if (forests.isEmpty()) {
-                    logger.warn("No forests found in the system");
                     Platform.runLater(() -> {
                         connectionStatusLabel.setText("No forests found. Please create a forest first.");
                         connectionStatusLabel.setStyle("-fx-text-fill: orange;");
@@ -155,20 +148,16 @@ public class AlertManagementController {
                     return;
                 }
 
-                // Get all sensors from all forests
                 int totalSensors = 0;
                 for (com.nci.forest.proto.Forest forest : forests) {
                     try {
                         List<Sensor> sensors = sensorGrpcClient.listSensors(forest.getId());
-                        logger.info("Found {} sensors in forest {} (ID: {})",
-                                   sensors.size(), forest.getName(), forest.getId());
-
                         totalSensors += sensors.size();
 
                         for (Sensor sensor : sensors) {
                             SensorModel sensorModel = new SensorModel(
                                     sensor.getId(),
-                                    sensor.getName() + " (" + forest.getName() + ")",  // show sensor name and forest name
+                                    sensor.getName() + " (" + forest.getName() + ")",
                                     sensor.getForestId(),
                                     sensor.getLatitude(),
                                     sensor.getLongitude(),
@@ -179,13 +168,11 @@ public class AlertManagementController {
                             Platform.runLater(() -> {
                                 if (!sensorComboBox.getItems().contains(sensorModel)) {
                                     sensorComboBox.getItems().add(sensorModel);
-                                    logger.debug("Added sensor to combo box: {}", sensor.getName());
                                 }
                             });
                         }
                     } catch (Exception e) {
-                        logger.warn("Could not load sensors for forest {}: {}",
-                                   forest.getId(), e.getMessage(), e);
+                        logger.error("Could not load sensors for forest {}: {}", forest.getId(), e.getMessage());
                     }
                 }
 
@@ -194,11 +181,9 @@ public class AlertManagementController {
                     if (loadedCount == 0) {
                         connectionStatusLabel.setText("No sensors found. Please create a sensor first.");
                         connectionStatusLabel.setStyle("-fx-text-fill: orange;");
-                        logger.warn("No sensors were loaded");
                     } else {
                         connectionStatusLabel.setText("Ready - Loaded " + loadedCount + " sensors");
                         connectionStatusLabel.setStyle("-fx-text-fill: green;");
-                        logger.info("Successfully loaded {} sensors", loadedCount);
                     }
                 });
             } catch (Exception e) {
@@ -212,10 +197,9 @@ public class AlertManagementController {
     }
 
     /**
-     * Reload sensors - can be called to refresh the sensor list
+     * Reload sensors
      */
     public void reloadSensors() {
-        logger.info("Reloading sensors");
         setupSensorComboBox();
     }
 
@@ -242,7 +226,6 @@ public class AlertManagementController {
 
                     @Override
                     public void onCompleted() {
-                        logger.info("Alert stream completed");
                         Platform.runLater(() -> {
                             connectionStatusLabel.setText("Disconnected");
                             connectionStatusLabel.setStyle("-fx-text-fill: orange;");
@@ -268,12 +251,8 @@ public class AlertManagementController {
      * Handle alert event received from server
      */
     private void handleAlertEvent(AlertEvent event) {
-        logger.warn("Alert received: {}", event.getSensorId());
-
-        // Store the alert
         alertEventMap.put(event.getAlertId(), event);
 
-        // Create alert event model
         AlertEventModel model = new AlertEventModel(
                 event.getAlertId(),
                 event.getSensorName(),
@@ -285,15 +264,10 @@ public class AlertManagementController {
         );
 
         Platform.runLater(() -> {
-            // Add to table
             alertTable.getItems().add(0, model);
-
-            // Update selected alert label
             selectedAlertLabel.setText("Latest: " + event.getSensorName() +
                                       " - " + event.getAlertType() +
                                       " (" + event.getCurrentTemperature() + "°C)");
-
-            // Show notification dialog
             showAlertNotification(event);
         });
     }
@@ -326,7 +300,7 @@ public class AlertManagementController {
      */
     private void handleSetAlert() {
         if (selectedSensor == null) {
-            showError("Please select a sensor first");
+            showAlert(Alert.AlertType.ERROR, "Please select a sensor first");
             return;
         }
 
@@ -335,17 +309,15 @@ public class AlertManagementController {
         new Thread(() -> {
             try {
                 alertGrpcClient.setAlertThreshold(selectedSensor.getId(), maxTemp);
-                logger.info("Alert threshold set for sensor: {} with max temp: {}",
-                           selectedSensor.getId(), maxTemp);
 
                 Platform.runLater(() -> {
-                    showInfo("Alert threshold set successfully for " + selectedSensor.getName() +
+                    showAlert(Alert.AlertType.INFORMATION, "Alert threshold set successfully for " + selectedSensor.getName() +
                             "\nMax Temperature: " + maxTemp + "°C");
                 });
             } catch (Exception e) {
                 logger.error("Error setting alert threshold", e);
                 Platform.runLater(() -> {
-                    showError("Failed to set alert threshold: " + e.getMessage());
+                    showAlert(Alert.AlertType.ERROR, "Failed to set alert threshold: " + e.getMessage());
                 });
             }
         }).start();
@@ -356,23 +328,21 @@ public class AlertManagementController {
      */
     private void handleClearAlert() {
         if (selectedSensor == null) {
-            showError("Please select a sensor first");
+            showAlert(Alert.AlertType.ERROR, "Please select a sensor first");
             return;
         }
 
         new Thread(() -> {
             try {
-                // Set very high threshold to effectively disable alerts
                 alertGrpcClient.setAlertThreshold(selectedSensor.getId(), 999);
-                logger.info("Alert cleared for sensor: {}", selectedSensor.getId());
 
                 Platform.runLater(() -> {
-                    showInfo("Alert cleared for " + selectedSensor.getName());
+                    showAlert(Alert.AlertType.INFORMATION, "Alert cleared for " + selectedSensor.getName());
                 });
             } catch (Exception e) {
                 logger.error("Error clearing alert", e);
                 Platform.runLater(() -> {
-                    showError("Failed to clear alert: " + e.getMessage());
+                    showAlert(Alert.AlertType.ERROR, "Failed to clear alert: " + e.getMessage());
                 });
             }
         }).start();
@@ -383,29 +353,11 @@ public class AlertManagementController {
      */
     private void handleSensorSelection() {
         selectedSensor = sensorComboBox.getSelectionModel().getSelectedItem();
-        if (selectedSensor != null) {
-            logger.info("Selected sensor: {}", selectedSensor.getName());
-        }
     }
 
-
-    /**
-     * Show info dialog
-     */
-    private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Info");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    /**
-     * Show error dialog
-     */
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
+    private void showAlert(Alert.AlertType type, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(type == Alert.AlertType.ERROR ? "Error" : "Info");
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -457,12 +409,3 @@ public class AlertManagementController {
         }
     }
 }
-
-
-
-
-
-
-
-
-

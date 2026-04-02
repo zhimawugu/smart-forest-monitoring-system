@@ -24,19 +24,13 @@ public class GrpcServerConfig {
     @Value("${grpc.server.port}")
     private int grpcPort;
 
-    @Value("${spring.application.name}")
-    private String applicationName;
-
-    @Value("${mdns.enabled:true}")
-    private boolean mdnsEnabled;
-
-    @Value("${mdns.service.type:_forest-grpc._tcp.local.}")
+    @Value("${jmdns.service.type:_forest-grpc._tcp.local.}")
     private String mdnsServiceType;
 
-    @Value("${mdns.service.name:forest-grpc-server}")
+    @Value("${jmdns.service.name:forest-grpc-server}")
     private String mdnsServiceName;
 
-    @Value("${mdns.service.description:Smart Forest gRPC Server}")
+    @Value("${jmdns.service.description:Smart Forest gRPC Server}")
     private String mdnsServiceDescription;
 
     private JmDNS jmDNS;
@@ -48,23 +42,14 @@ public class GrpcServerConfig {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         registerMdnsService();
-        logger.info("========================================");
-        logger.info("{} started successfully", applicationName);
-        logger.info("gRPC Server listening on port: {}", grpcPort);
-        logger.info("========================================");
     }
 
     @PreDestroy
     public void onShutdown() {
-        unregisterMdnsService();
+        unregisterJMdnsService();
     }
 
     private void registerMdnsService() {
-        if (!mdnsEnabled) {
-            logger.info("mDNS registration is disabled");
-            return;
-        }
-
         try {
             InetAddress localAddress = InetAddress.getLocalHost();
             jmDNS = JmDNS.create(localAddress);
@@ -76,18 +61,12 @@ public class GrpcServerConfig {
                     mdnsServiceDescription
             );
             jmDNS.registerService(serviceInfo);
-
-            logger.info("mDNS registered: type={}, name={}, host={}, port={}",
-                    mdnsServiceType,
-                    mdnsServiceName,
-                    localAddress.getHostAddress(),
-                    grpcPort);
         } catch (IOException e) {
             logger.warn("Failed to register mDNS service, fallback to static endpoint: {}", e.getMessage());
         }
     }
 
-    private void unregisterMdnsService() {
+    private void unregisterJMdnsService() {
         if (jmDNS == null) {
             return;
         }
@@ -97,9 +76,8 @@ public class GrpcServerConfig {
                 jmDNS.unregisterService(serviceInfo);
             }
             jmDNS.close();
-            logger.info("mDNS service unregistered");
         } catch (IOException e) {
-            logger.warn("Failed to close mDNS cleanly: {}", e.getMessage());
+            logger.warn("Failed to close jmDNS cleanly: {}", e.getMessage());
         }
     }
 }

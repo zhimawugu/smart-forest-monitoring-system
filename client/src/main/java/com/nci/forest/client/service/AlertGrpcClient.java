@@ -7,7 +7,6 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.TimeUnit;
 
 /**
  * Alert gRPC Client Service
@@ -16,13 +15,11 @@ import java.util.concurrent.TimeUnit;
 public class AlertGrpcClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AlertGrpcClient.class);
-    private static final long DEFAULT_DEADLINE_SECONDS = 30;
     private static final String SERVICE_TYPE = "_forest-grpc._tcp.local.";
 
     private final ManagedChannel channel;
     private final AlertServiceGrpc.AlertServiceStub asyncStub;
     private StreamObserver<AlertMessage> requestObserver;
-    private long deadlineSeconds = DEFAULT_DEADLINE_SECONDS;
 
     public interface AlertEventCallback {
         void onAlertReceived(AlertEvent event);
@@ -61,12 +58,10 @@ public class AlertGrpcClient {
 
             @Override
             public void onError(Throwable t) {
-                // Check if error was due to deadline exceeded
+                // Check if error was due to cancellation
                 if (t instanceof io.grpc.StatusRuntimeException) {
                     io.grpc.StatusRuntimeException e = (io.grpc.StatusRuntimeException) t;
-                    if (e.getStatus() == io.grpc.Status.DEADLINE_EXCEEDED) {
-                        logger.error("Alert watch stream exceeded deadline of {} seconds", deadlineSeconds);
-                    } else if (e.getStatus() == io.grpc.Status.CANCELLED) {
+                    if (e.getStatus() == io.grpc.Status.CANCELLED) {
                         logger.info("Alert watch stream was cancelled");
                     }
                 }
@@ -86,11 +81,9 @@ public class AlertGrpcClient {
         };
 
         try {
-            // Create bidirectional stream with deadline and store request observer
-            AlertServiceGrpc.AlertServiceStub asyncStubWithDeadline = 
-                asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
-            this.requestObserver = asyncStubWithDeadline.watchAlerts(responseObserver);
-            logger.info("Alert watch stream established with {} second deadline", deadlineSeconds);
+            // Create bidirectional stream without deadline (should stay connected)
+            this.requestObserver = asyncStub.watchAlerts(responseObserver);
+            logger.info("Alert watch stream established");
         } catch (io.grpc.StatusRuntimeException e) {
             logger.error("Failed to establish alert watch stream: {}", e.getMessage());
             if (callback != null) {
@@ -123,31 +116,5 @@ public class AlertGrpcClient {
         } catch (Exception e) {
             logger.error("Error setting alert threshold for sensor {}: {}", sensorId, e.getMessage());
         }
-    }
-
-    /**
-     * Set the deadline for gRPC calls (in seconds)
-     */
-    public void setDeadlineSeconds(long seconds) {
-        this.deadlineSeconds = seconds;
-    }
-
-    /**
-     * Close the alert watch stream and channel
-     */
-    public void close() {
-        try {
-            if (requestObserver != null) {
-                requestObserver.onCompleted();
-            }
-            channel.shutdown();
-            logger.info("Alert gRPC client shutdown");
-        } catch (Exception e) {
-            logger.error("Error closing alert gRPC client: {}", e.getMessage());
-        }
-    }
-
-    public boolean isConnected() {
-        return requestObserver != null && !channel.isShutdown();
     }
 }

@@ -122,17 +122,12 @@ public class ForestManagementController {
         // Convert result
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == addButtonType) {
-                try {
-                    String name = nameField.getText();
-                    double lat = Double.parseDouble(latField.getText());
-                    double lon = Double.parseDouble(lonField.getText());
-                    String address = addressField.getText();
+                String name = nameField.getText();
+                String lat = latField.getText();
+                String lon = lonField.getText();
+                String address = addressField.getText();
 
-                    return new ForestModel("", name, String.valueOf(lat), String.valueOf(lon), address);
-                } catch (NumberFormatException e) {
-                    showError("Invalid Input", "Please enter valid numbers for latitude and longitude");
-                    return null;
-                }
+                return new ForestModel("", name, lat, lon, address);
             }
             return null;
         });
@@ -140,7 +135,7 @@ public class ForestManagementController {
         Optional<ForestModel> result = dialog.showAndWait();
         result.ifPresent(forest -> {
             try {
-                // Call gRPC service
+                // Call gRPC service - let server handle validation
                 var response = grpcClient.addForest(
                         forest.getName(),
                         Double.parseDouble(forest.getLatitude()),
@@ -149,13 +144,22 @@ public class ForestManagementController {
                 );
 
                 if (response.getSuccess()) {
-                    showInfo("Success", response.getMessage());
+                    showAlert(Alert.AlertType.INFORMATION, "Success", response.getMessage());
                     loadForests();
                 } else {
-                    showError("Failed", response.getMessage());
+                    showAlert(Alert.AlertType.ERROR, "Failed", response.getMessage());
                 }
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Error", "Invalid coordinate format: " + e.getMessage());
+            } catch (io.grpc.StatusRuntimeException e) {
+                // Extract detailed error message from gRPC Status
+                String errorMessage = e.getStatus().getDescription();
+                if (errorMessage == null || errorMessage.isEmpty()) {
+                    errorMessage = e.getStatus().getCode() + ": " + e.getMessage();
+                }
+                showAlert(Alert.AlertType.ERROR, "Error", errorMessage);
             } catch (Exception e) {
-                showError("Error", "Failed to add forest: " + e.getMessage());
+                showAlert(Alert.AlertType.ERROR, "Error", "Failed to add forest: " + e.getMessage());
             }
         });
     }
@@ -170,7 +174,7 @@ public class ForestManagementController {
         ObservableList<ForestModel> selectedItems = forestTable.getSelectionModel().getSelectedItems();
 
         if (selectedItems == null || selectedItems.isEmpty()) {
-            showWarning("No Selection", "Please select at least one forest to delete");
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select at least one forest to delete");
             return;
         }
 
@@ -205,15 +209,15 @@ public class ForestManagementController {
 
                     Platform.runLater(() -> {
                         if (response.getSuccess()) {
-                            showInfo("Success", response.getMessage());
+                            showAlert(Alert.AlertType.INFORMATION, "Success", response.getMessage());
                         } else {
-                            showError("Failed", response.getMessage());
+                            showAlert(Alert.AlertType.ERROR, "Failed", response.getMessage());
                         }
                         loadForests();
                     });
                 } catch (Exception e) {
                     Platform.runLater(() -> {
-                        showError("Error", "Failed to delete forests: " + e.getMessage());
+                        showAlert(Alert.AlertType.ERROR, "Error", "Failed to delete forests: " + e.getMessage());
                     });
                 }
             }).start();
@@ -247,53 +251,18 @@ public class ForestManagementController {
                 forestList.add(model);
             }
         } catch (Exception e) {
-            showError("Error", "Failed to load forests: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Error", "Failed to load forests: " + e.getMessage());
         }
     }
 
     /**
-     * Show info alert
+     * Show alert dialog
      */
-    private void showInfo(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    private void showAlert(Alert.AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
-    }
-
-    /**
-     * Show warning alert
-     */
-    private void showWarning(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
-    }
-
-    /**
-     * Show error alert
-     */
-    private void showError(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
-    }
-
-    /**
-     * Cleanup when controller is destroyed
-     */
-    public void shutdown() {
-        try {
-            if (grpcClient != null) {
-                grpcClient.shutdown();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 }
