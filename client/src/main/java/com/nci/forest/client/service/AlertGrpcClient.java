@@ -1,6 +1,9 @@
 package com.nci.forest.client.service;
 
-import com.nci.forest.proto.*;
+import com.nci.forest.proto.AlertEvent;
+import com.nci.forest.proto.AlertMessage;
+import com.nci.forest.proto.AlertServiceGrpc;
+import com.nci.forest.proto.SetAlertRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -13,7 +16,6 @@ import org.slf4j.LoggerFactory;
  * Manages bidirectional communication with server for alert monitoring
  */
 public class AlertGrpcClient {
-
     private static final Logger logger = LoggerFactory.getLogger(AlertGrpcClient.class);
     private static final String SERVICE_TYPE = "_forest-grpc._tcp.local.";
 
@@ -21,19 +23,9 @@ public class AlertGrpcClient {
     private final AlertServiceGrpc.AlertServiceStub asyncStub;
     private StreamObserver<AlertMessage> requestObserver;
 
-    public interface AlertEventCallback {
-        void onAlertReceived(AlertEvent event);
-
-        void onError(Throwable t);
-
-        void onCompleted();
-    }
-
     public AlertGrpcClient() {
         GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve(SERVICE_TYPE);
-        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
-                .usePlaintext()
-                .build();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port()).usePlaintext().build();
         this.asyncStub = AlertServiceGrpc.newStub(channel);
         logger.info("Alert gRPC client created for {}:{}", endpoint.host(), endpoint.port());
     }
@@ -48,9 +40,7 @@ public class AlertGrpcClient {
         StreamObserver<AlertEvent> responseObserver = new StreamObserver<AlertEvent>() {
             @Override
             public void onNext(AlertEvent alertEvent) {
-                logger.warn("Alert received: sensor={}, type={}, temp={}°C",
-                           alertEvent.getSensorId(), alertEvent.getAlertType(),
-                           alertEvent.getCurrentTemperature());
+                logger.warn("Alert received: sensor={}, type={}, temp={}°C", alertEvent.getSensorId(), alertEvent.getAlertType(), alertEvent.getCurrentTemperature());
                 if (callback != null) {
                     callback.onAlertReceived(alertEvent);
                 }
@@ -102,19 +92,22 @@ public class AlertGrpcClient {
         }
 
         try {
-            SetAlertRequest setAlertRequest = SetAlertRequest.newBuilder()
-                    .setSensorId(sensorId)
-                    .setMaxTemperature(maxTemp)
-                    .build();
+            SetAlertRequest setAlertRequest = SetAlertRequest.newBuilder().setSensorId(sensorId).setMaxTemperature(maxTemp).build();
 
-            AlertMessage message = AlertMessage.newBuilder()
-                    .setSetAlert(setAlertRequest)
-                    .build();
+            AlertMessage message = AlertMessage.newBuilder().setSetAlert(setAlertRequest).build();
 
             requestObserver.onNext(message);
             logger.info("Alert threshold set for sensor {}: max={}", sensorId, maxTemp);
         } catch (Exception e) {
             logger.error("Error setting alert threshold for sensor {}: {}", sensorId, e.getMessage());
         }
+    }
+
+    public interface AlertEventCallback {
+        void onAlertReceived(AlertEvent event);
+
+        void onError(Throwable t);
+
+        void onCompleted();
     }
 }

@@ -9,7 +9,10 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -30,31 +33,21 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
             if (Context.current().getDeadline() != null) {
                 long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
                 if (timeRemainingMs <= 0) {
-                    responseObserver.onError(
-                        Status.DEADLINE_EXCEEDED.withDescription("Request deadline exceeded").asException()
-                    );
+                    responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Request deadline exceeded").asException());
                     return;
                 }
             }
 
             // Validate request - name
             if (request.getName() == null || request.getName().isEmpty()) {
-                responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                        .withDescription("Validation failed: Forest name cannot be empty")
-                        .asException()
-                );
+                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Validation failed: Forest name cannot be empty").asException());
                 return;
             }
 
             // Validate location coordinates
             String locationError = LocationValidator.validateCoordinates(request.getLatitude(), request.getLongitude());
             if (locationError != null) {
-                responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                        .withDescription("Validation failed: " + locationError)
-                        .asException()
-                );
+                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Validation failed: " + locationError).asException());
                 return;
             }
 
@@ -62,12 +55,7 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
             String forestId = UUID.randomUUID().toString();
 
             // Create forest object
-            Forest forest = Forest.newBuilder()
-                    .setId(forestId)
-                    .setName(request.getName())
-                    .setLatitude(request.getLatitude())
-                    .setLongitude(request.getLongitude())
-                    .build();
+            Forest forest = Forest.newBuilder().setId(forestId).setName(request.getName()).setLatitude(request.getLatitude()).setLongitude(request.getLongitude()).build();
 
             // Store the forest
             forestStore.put(forestId, forest);
@@ -84,9 +72,9 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
     @Override
     public StreamObserver<DeleteForestRequest> deleteForest(StreamObserver<DeleteForestResponse> responseObserver) {
         return new StreamObserver<>() {
+            private final StringBuilder errorMessages = new StringBuilder();
             private int successCount = 0;
             private int failureCount = 0;
-            private final StringBuilder errorMessages = new StringBuilder();
 
             @Override
             public void onNext(DeleteForestRequest request) {
@@ -132,15 +120,11 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
                 } else if (successCount == 0) {
                     message = String.format("Failed to delete forests: %s", errorMessages);
                 } else {
-                    message = String.format("Deleted %d forest(s), %d failed: %s",
-                            successCount, failureCount, errorMessages);
+                    message = String.format("Deleted %d forest(s), %d failed: %s", successCount, failureCount, errorMessages);
                 }
 
                 // Send response
-                DeleteForestResponse response = DeleteForestResponse.newBuilder()
-                        .setSuccess(success)
-                        .setMessage(message)
-                        .build();
+                DeleteForestResponse response = DeleteForestResponse.newBuilder().setSuccess(success).setMessage(message).build();
 
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
@@ -157,10 +141,7 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
             List<Forest> forests = new ArrayList<>(forestStore.values());
 
             // Build and send response
-            ListForestsResponse response = ListForestsResponse.newBuilder()
-                    .addAllForests(forests)
-                    .setTotal(forests.size())
-                    .build();
+            ListForestsResponse response = ListForestsResponse.newBuilder().addAllForests(forests).setTotal(forests.size()).build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -174,11 +155,8 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
     /**
      * Helper method to send AddForestResponse
      */
-    private void sendAddForestResponse(boolean success, String message, Forest forest,
-                                       StreamObserver<AddForestResponse> responseObserver) {
-        AddForestResponse.Builder responseBuilder = AddForestResponse.newBuilder()
-                .setSuccess(success)
-                .setMessage(message);
+    private void sendAddForestResponse(boolean success, String message, Forest forest, StreamObserver<AddForestResponse> responseObserver) {
+        AddForestResponse.Builder responseBuilder = AddForestResponse.newBuilder().setSuccess(success).setMessage(message);
 
         if (forest != null) {
             responseBuilder.setForest(forest);

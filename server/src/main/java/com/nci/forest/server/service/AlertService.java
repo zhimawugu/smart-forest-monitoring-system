@@ -1,13 +1,16 @@
 package com.nci.forest.server.service;
 
-import com.nci.forest.proto.*;
+import com.nci.forest.proto.AlertConfig;
+import com.nci.forest.proto.AlertEvent;
+import com.nci.forest.proto.SetAlertRequest;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Alert Service Implementation
@@ -15,7 +18,6 @@ import java.util.concurrent.*;
  */
 @Service
 public class AlertService {
-
     private static final Logger logger = LoggerFactory.getLogger(AlertService.class);
 
     // Store alert configurations for each sensor: sensor_id -> AlertConfig
@@ -35,10 +37,7 @@ public class AlertService {
      * Process SetAlertRequest from client
      */
     public void setAlertThreshold(SetAlertRequest request) {
-        AlertConfig config = AlertConfig.newBuilder()
-                .setSensorId(request.getSensorId())
-                .setMaxTemperature(request.getMaxTemperature())
-                .build();
+        AlertConfig config = AlertConfig.newBuilder().setSensorId(request.getSensorId()).setMaxTemperature(request.getMaxTemperature()).build();
         alertConfigs.put(request.getSensorId(), config);
     }
 
@@ -52,24 +51,14 @@ public class AlertService {
     /**
      * Check if temperature exceeds alert threshold and trigger alert if needed
      */
-    public void checkAndTriggerAlert(String sensorId, String sensorName, String forestId,
-                                     double currentTemperature) {
+    public void checkAndTriggerAlert(String sensorId, String sensorName, String forestId, double currentTemperature) {
         AlertConfig config = alertConfigs.get(sensorId);
         if (config == null) {
             return;
         }
 
         if (currentTemperature > config.getMaxTemperature()) {
-            AlertEvent alertEvent = AlertEvent.newBuilder()
-                    .setAlertId(UUID.randomUUID().toString())
-                    .setSensorId(sensorId)
-                    .setSensorName(sensorName)
-                    .setForestId(forestId)
-                    .setCurrentTemperature(Math.round(currentTemperature * 100.0) / 100.0)
-                    .setThreshold(config.getMaxTemperature())
-                    .setTimestamp(System.currentTimeMillis())
-                    .setAlertType("OVER_TEMP")
-                    .build();
+            AlertEvent alertEvent = AlertEvent.newBuilder().setAlertId(UUID.randomUUID().toString()).setSensorId(sensorId).setSensorName(sensorName).setForestId(forestId).setCurrentTemperature(Math.round(currentTemperature * 100.0) / 100.0).setThreshold(config.getMaxTemperature()).setTimestamp(System.currentTimeMillis()).setAlertType("OVER_TEMP").build();
 
             for (Map.Entry<String, StreamObserver<AlertEvent>> entry : alertObservers.entrySet()) {
                 try {

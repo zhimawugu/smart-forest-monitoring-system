@@ -16,35 +16,17 @@ import java.util.Optional;
  * Controller for Forest Management Tab
  */
 public class ForestManagementController {
-
+    private final ObservableList<ForestModel> forestList = FXCollections.observableArrayList();
     @FXML
     private TableView<ForestModel> forestTable;
-
     @FXML
     private TableColumn<ForestModel, String> idColumn;
-
     @FXML
     private TableColumn<ForestModel, String> nameColumn;
-
     @FXML
     private TableColumn<ForestModel, String> latitudeColumn;
-
     @FXML
     private TableColumn<ForestModel, String> longitudeColumn;
-
-    @FXML
-    private TableColumn<ForestModel, String> addressColumn;
-
-    @FXML
-    private Button addButton;
-
-    @FXML
-    private Button deleteButton;
-
-    @FXML
-    private Button refreshButton;
-
-    private final ObservableList<ForestModel> forestList = FXCollections.observableArrayList();
     private ForestGrpcClient grpcClient;
 
     /**
@@ -63,7 +45,6 @@ public class ForestManagementController {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         latitudeColumn.setCellValueFactory(new PropertyValueFactory<>("latitude"));
         longitudeColumn.setCellValueFactory(new PropertyValueFactory<>("longitude"));
-        addressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
 
         // Bind data to table
         forestTable.setItems(forestList);
@@ -96,9 +77,6 @@ public class ForestManagementController {
         TextField lonField = new TextField();
         lonField.setPromptText("Longitude (e.g., -110.5885)");
 
-        TextField addressField = new TextField();
-        addressField.setPromptText("Address (optional)");
-
         // Layout
         javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
         grid.setHgap(10);
@@ -111,8 +89,6 @@ public class ForestManagementController {
         grid.add(latField, 1, 1);
         grid.add(new Label("Longitude:"), 0, 2);
         grid.add(lonField, 1, 2);
-        grid.add(new Label("Address:"), 0, 3);
-        grid.add(addressField, 1, 3);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -125,9 +101,8 @@ public class ForestManagementController {
                 String name = nameField.getText();
                 String lat = latField.getText();
                 String lon = lonField.getText();
-                String address = addressField.getText();
 
-                return new ForestModel("", name, lat, lon, address);
+                return new ForestModel("", name, lat, lon);
             }
             return null;
         });
@@ -136,12 +111,7 @@ public class ForestManagementController {
         result.ifPresent(forest -> {
             try {
                 // Call gRPC service - let server handle validation
-                var response = grpcClient.addForest(
-                        forest.getName(),
-                        Double.parseDouble(forest.getLatitude()),
-                        Double.parseDouble(forest.getLongitude()),
-                        forest.getAddress()
-                );
+                var response = grpcClient.addForest(forest.getName(), Double.parseDouble(forest.getLatitude()), Double.parseDouble(forest.getLongitude()));
 
                 if (response.getSuccess()) {
                     showAlert(Alert.AlertType.INFORMATION, "Success", response.getMessage());
@@ -189,8 +159,7 @@ public class ForestManagementController {
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmAlert.setTitle("Confirm Batch Deletion");
         confirmAlert.setHeaderText("Delete Multiple Forests");
-        confirmAlert.setContentText(String.format("Are you sure you want to delete %d forest(s)?\n\n%s",
-                selectedItems.size(), forestNames.toString()));
+        confirmAlert.setContentText(String.format("Are you sure you want to delete %d forest(s)?\n\n%s", selectedItems.size(), forestNames));
 
         Optional<ButtonType> result = confirmAlert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
@@ -199,9 +168,7 @@ public class ForestManagementController {
                     // Build delete requests
                     java.util.List<com.nci.forest.proto.DeleteForestRequest> requests = new java.util.ArrayList<>();
                     for (ForestModel forest : selectedItems) {
-                        requests.add(com.nci.forest.proto.DeleteForestRequest.newBuilder()
-                                .setId(forest.getId())
-                                .build());
+                        requests.add(com.nci.forest.proto.DeleteForestRequest.newBuilder().setId(forest.getId()).build());
                     }
 
                     // Send batch delete request
@@ -241,13 +208,7 @@ public class ForestManagementController {
             forestList.clear();
 
             for (Forest forest : forests) {
-                ForestModel model = new ForestModel(
-                        forest.getId(),
-                        forest.getName(),
-                        String.valueOf(forest.getLatitude()),
-                        String.valueOf(forest.getLongitude()),
-                        ""
-                );
+                ForestModel model = new ForestModel(forest.getId(), forest.getName(), String.valueOf(forest.getLatitude()), String.valueOf(forest.getLongitude()));
                 forestList.add(model);
             }
         } catch (Exception e) {

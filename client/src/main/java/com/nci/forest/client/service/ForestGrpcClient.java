@@ -25,23 +25,16 @@ public class ForestGrpcClient {
 
     public ForestGrpcClient() {
         GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve(SERVICE_TYPE);
-        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
-                .usePlaintext()
-                .build();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port()).usePlaintext().build();
         this.blockingStub = ForestServiceGrpc.newBlockingStub(channel);
         this.asyncStub = ForestServiceGrpc.newStub(channel);
     }
 
-    public AddForestResponse addForest(String name, double latitude, double longitude, String address) {
+    public AddForestResponse addForest(String name, double latitude, double longitude) {
         try {
-            AddForestRequest request = AddForestRequest.newBuilder()
-                    .setName(name)
-                    .setLatitude(latitude)
-                    .setLongitude(longitude)
-                    .build();
+            AddForestRequest request = AddForestRequest.newBuilder().setName(name).setLatitude(latitude).setLongitude(longitude).build();
 
-            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = 
-                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             return stubWithDeadline.addForest(request);
         } catch (StatusRuntimeException e) {
             if (e.getStatus() == io.grpc.Status.DEADLINE_EXCEEDED) {
@@ -65,17 +58,16 @@ public class ForestGrpcClient {
 
             @Override
             public void onError(Throwable t) {
-                responseFuture.completeExceptionally(
-                        new RuntimeException("Failed to delete forest(s): " + t.getMessage(), t));
+                responseFuture.completeExceptionally(new RuntimeException("Failed to delete forest(s): " + t.getMessage(), t));
             }
 
             @Override
-            public void onCompleted() {}
+            public void onCompleted() {
+            }
         };
 
         try {
-            ForestServiceGrpc.ForestServiceStub asyncStubWithDeadline = 
-                asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            ForestServiceGrpc.ForestServiceStub asyncStubWithDeadline = asyncStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             StreamObserver<DeleteForestRequest> requestObserver = asyncStubWithDeadline.deleteForest(responseObserver);
 
             for (DeleteForestRequest request : requests) {
@@ -92,8 +84,7 @@ public class ForestGrpcClient {
     public List<Forest> listForests() {
         try {
             ListForestsRequest request = ListForestsRequest.newBuilder().build();
-            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = 
-                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            ForestServiceGrpc.ForestServiceBlockingStub stubWithDeadline = blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             ListForestsResponse response = stubWithDeadline.listForests(request);
             return new ArrayList<>(response.getForestsList());
         } catch (StatusRuntimeException e) {

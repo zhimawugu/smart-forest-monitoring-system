@@ -2,8 +2,8 @@ package com.nci.forest.client.controller;
 
 import com.nci.forest.client.model.SensorModel;
 import com.nci.forest.client.service.AlertGrpcClient;
-import com.nci.forest.client.service.SensorGrpcClient;
 import com.nci.forest.client.service.ForestGrpcClient;
+import com.nci.forest.client.service.SensorGrpcClient;
 import com.nci.forest.proto.AlertEvent;
 import com.nci.forest.proto.Sensor;
 import javafx.application.Platform;
@@ -16,7 +16,10 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Alert Management Controller
@@ -25,51 +28,37 @@ import java.util.*;
 public class AlertManagementController {
 
     private static final Logger logger = LoggerFactory.getLogger(AlertManagementController.class);
-
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     @FXML
     private ComboBox<SensorModel> sensorComboBox;
-
     @FXML
     private Spinner<Integer> maxTempSpinner;
-
     @FXML
     private Button setAlertButton;
-
     @FXML
     private Button clearAlertButton;
-
     @FXML
     private TableView<AlertEventModel> alertTable;
-
     @FXML
     private TableColumn<AlertEventModel, String> sensorNameColumn;
-
     @FXML
     private TableColumn<AlertEventModel, String> alertTypeColumn;
-
     @FXML
     private TableColumn<AlertEventModel, Number> tempColumn;
-
     @FXML
     private TableColumn<AlertEventModel, Number> thresholdColumn;
-
     @FXML
     private TableColumn<AlertEventModel, String> timeColumn;
-
     @FXML
     private Label connectionStatusLabel;
-
     @FXML
     private Label selectedAlertLabel;
-
     private SensorGrpcClient sensorGrpcClient;
     private ForestGrpcClient forestGrpcClient;
     private AlertGrpcClient alertGrpcClient;
-    private Map<String, SensorModel> sensorMap = new HashMap<>();
-    private Map<String, AlertEvent> alertEventMap = new HashMap<>();
+    private final Map<String, SensorModel> sensorMap = new HashMap<>();
+    private final Map<String, AlertEvent> alertEventMap = new HashMap<>();
     private SensorModel selectedSensor;
-
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @FXML
     public void initialize() {
@@ -155,14 +144,7 @@ public class AlertManagementController {
                         totalSensors += sensors.size();
 
                         for (Sensor sensor : sensors) {
-                            SensorModel sensorModel = new SensorModel(
-                                    sensor.getId(),
-                                    sensor.getName() + " (" + forest.getName() + ")",
-                                    sensor.getForestId(),
-                                    sensor.getLatitude(),
-                                    sensor.getLongitude(),
-                                    String.valueOf(sensor.getCreatedAt())
-                            );
+                            SensorModel sensorModel = new SensorModel(sensor.getId(), sensor.getName() + " (" + forest.getName() + ")", sensor.getForestId(), sensor.getLatitude(), sensor.getLongitude(), String.valueOf(sensor.getCreatedAt()));
                             sensorMap.put(sensor.getId(), sensorModel);
 
                             Platform.runLater(() -> {
@@ -253,21 +235,11 @@ public class AlertManagementController {
     private void handleAlertEvent(AlertEvent event) {
         alertEventMap.put(event.getAlertId(), event);
 
-        AlertEventModel model = new AlertEventModel(
-                event.getAlertId(),
-                event.getSensorName(),
-                event.getAlertType(),
-                event.getCurrentTemperature(),
-                event.getThreshold(),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimestamp()),
-                        ZoneId.systemDefault()).format(formatter)
-        );
+        AlertEventModel model = new AlertEventModel(event.getAlertId(), event.getSensorName(), event.getAlertType(), event.getCurrentTemperature(), event.getThreshold(), LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimestamp()), ZoneId.systemDefault()).format(formatter));
 
         Platform.runLater(() -> {
             alertTable.getItems().add(0, model);
-            selectedAlertLabel.setText("Latest: " + event.getSensorName() +
-                                      " - " + event.getAlertType() +
-                                      " (" + event.getCurrentTemperature() + "°C)");
+            selectedAlertLabel.setText("Latest: " + event.getSensorName() + " - " + event.getAlertType() + " (" + event.getCurrentTemperature() + "°C)");
             showAlertNotification(event);
         });
     }
@@ -280,16 +252,7 @@ public class AlertManagementController {
         alert.setTitle("⚠️ Temperature Alert");
         alert.setHeaderText("Sensor: " + event.getSensorName());
 
-        String message = String.format("Alert Type: %s\n" +
-                        "Current Temperature: %.2f°C\n" +
-                        "Threshold: %.2f°C\n" +
-                        "Time: %s",
-                event.getAlertType(),
-                event.getCurrentTemperature(),
-                event.getThreshold(),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimestamp()),
-                        ZoneId.systemDefault()).format(formatter)
-        );
+        String message = String.format("Alert Type: %s\n" + "Current Temperature: %.2f°C\n" + "Threshold: %.2f°C\n" + "Time: %s", event.getAlertType(), event.getCurrentTemperature(), event.getThreshold(), LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimestamp()), ZoneId.systemDefault()).format(formatter));
 
         alert.setContentText(message);
         alert.showAndWait();
@@ -311,8 +274,7 @@ public class AlertManagementController {
                 alertGrpcClient.setAlertThreshold(selectedSensor.getId(), maxTemp);
 
                 Platform.runLater(() -> {
-                    showAlert(Alert.AlertType.INFORMATION, "Alert threshold set successfully for " + selectedSensor.getName() +
-                            "\nMax Temperature: " + maxTemp + "°C");
+                    showAlert(Alert.AlertType.INFORMATION, "Alert threshold set successfully for " + selectedSensor.getName() + "\nMax Temperature: " + maxTemp + "°C");
                 });
             } catch (Exception e) {
                 logger.error("Error setting alert threshold", e);
@@ -367,25 +329,20 @@ public class AlertManagementController {
      * Model class for alert events in table
      */
     public static class AlertEventModel {
-        private String alertId;
-        private javafx.beans.property.StringProperty sensorName;
-        private javafx.beans.property.StringProperty alertType;
-        private javafx.beans.property.DoubleProperty temperature;
-        private javafx.beans.property.DoubleProperty threshold;
-        private javafx.beans.property.StringProperty time;
+        private final String alertId;
+        private final javafx.beans.property.StringProperty sensorName;
+        private final javafx.beans.property.StringProperty alertType;
+        private final javafx.beans.property.DoubleProperty temperature;
+        private final javafx.beans.property.DoubleProperty threshold;
+        private final javafx.beans.property.StringProperty time;
 
-        public AlertEventModel(String alertId, String sensorName, String alertType,
-                               double temperature, double threshold, String time) {
+        public AlertEventModel(String alertId, String sensorName, String alertType, double temperature, double threshold, String time) {
             this.alertId = alertId;
             this.sensorName = new javafx.beans.property.SimpleStringProperty(sensorName);
             this.alertType = new javafx.beans.property.SimpleStringProperty(alertType);
             this.temperature = new javafx.beans.property.SimpleDoubleProperty(temperature);
             this.threshold = new javafx.beans.property.SimpleDoubleProperty(threshold);
             this.time = new javafx.beans.property.SimpleStringProperty(time);
-        }
-
-        public String getAlertId() {
-            return alertId;
         }
 
         public javafx.beans.property.StringProperty sensorNameProperty() {

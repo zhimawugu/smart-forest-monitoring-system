@@ -1,8 +1,8 @@
 package com.nci.forest.client.model;
 
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
 
 /**
@@ -15,8 +15,7 @@ public class TemperatureDataModel {
     private final DoubleProperty temperature;
     private final StringProperty timestamp;
 
-    public TemperatureDataModel(String sensorId, String sensorName, String forestId,
-                               double temperature, String timestamp) {
+    public TemperatureDataModel(String sensorId, String sensorName, String forestId, double temperature, String timestamp) {
         this.sensorId = new SimpleStringProperty(sensorId);
         this.sensorName = new SimpleStringProperty(sensorName);
         this.forestId = new SimpleStringProperty(forestId);

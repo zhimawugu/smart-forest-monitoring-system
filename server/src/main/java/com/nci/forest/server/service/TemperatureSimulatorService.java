@@ -17,7 +17,6 @@ import java.util.function.Consumer;
  */
 @Service
 public class TemperatureSimulatorService {
-
     private static final Logger logger = LoggerFactory.getLogger(TemperatureSimulatorService.class);
 
     private static final Random random = new Random();
@@ -29,7 +28,7 @@ public class TemperatureSimulatorService {
     private final ConcurrentHashMap<String, Double> baseTemperatures = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<Consumer<TemperatureData>>> subscribers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Thread> simulatorThreads = new ConcurrentHashMap<>();
-    private volatile boolean isRunning = true;
+    private final boolean isRunning = true;
 
     @Autowired
     private AlertService alertService;
@@ -69,13 +68,7 @@ public class TemperatureSimulatorService {
                 try {
                     double temperature = generateTemperature(baseTemp);
 
-                    TemperatureData data = TemperatureData.newBuilder()
-                            .setSensorId(sensorId)
-                            .setSensorName(sensorName)
-                            .setForestId(forestId)
-                            .setTemperature(temperature)
-                            .setTimestamp(System.currentTimeMillis())
-                            .build();
+                    TemperatureData data = TemperatureData.newBuilder().setSensorId(sensorId).setSensorName(sensorName).setForestId(forestId).setTemperature(temperature).setTimestamp(System.currentTimeMillis()).build();
 
                     alertService.checkAndTriggerAlert(sensorId, sensorName, forestId, temperature);
 

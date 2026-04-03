@@ -19,7 +19,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Sensor Dashboard Controller
@@ -28,47 +29,35 @@ import java.util.*;
 public class SensorDashboardController {
 
     private static final Logger logger = LoggerFactory.getLogger(SensorDashboardController.class);
-
+    private final List<TemperatureDataModel> temperatureDataList = new ArrayList<>();
+    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     @FXML
     private ComboBox<SensorModel> sensorComboBox;
-
     @FXML
     private TableView<TemperatureDataModel> temperatureTable;
-
     @FXML
     private TableColumn<TemperatureDataModel, String> timeColumn;
-
     @FXML
     private TableColumn<TemperatureDataModel, Number> tempColumn;
-
     @FXML
     private TableColumn<TemperatureDataModel, String> sensorNameColumn;
-
     @FXML
     private Label currentTempLabel;
-
     @FXML
     private Label avgTempLabel;
-
     @FXML
     private Label minMaxLabel;
-
     @FXML
     private Label lastUpdateLabel;
-
     @FXML
     private Label statusLabel;
-
     @FXML
     private Button stopStreamButton;
-
     private SensorGrpcClient sensorGrpcClient;
     private ForestGrpcClient forestGrpcClient;
     private TemperatureDataStreamClient temperatureStreamClient;
     private Context.CancellableContext currentStreamContext;
     private SensorModel selectedSensor;
-    private final List<TemperatureDataModel> temperatureDataList = new ArrayList<>();
-    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     @FXML
     public void initialize() {
@@ -100,19 +89,9 @@ public class SensorDashboardController {
                 for (Forest forest : forests) {
                     List<Sensor> sensors = sensorGrpcClient.listSensors(forest.getId());
                     for (Sensor sensor : sensors) {
-                        LocalDateTime dateTime = LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(sensor.getCreatedAt()),
-                                ZoneId.systemDefault()
-                        );
+                        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(sensor.getCreatedAt()), ZoneId.systemDefault());
 
-                        SensorModel model = new SensorModel(
-                                sensor.getId(),
-                                sensor.getName(),
-                                sensor.getForestId(),
-                                sensor.getLatitude(),
-                                sensor.getLongitude(),
-                                dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                        );
+                        SensorModel model = new SensorModel(sensor.getId(), sensor.getName(), sensor.getForestId(), sensor.getLatitude(), sensor.getLongitude(), dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
                         allSensors.add(model);
                     }
                 }
@@ -168,11 +147,7 @@ public class SensorDashboardController {
         }
 
         // Request temperature stream from server and save context
-        currentStreamContext = temperatureStreamClient.startStreamingTemperatureData(
-                selectedSensor.getId(),
-                selectedSensor.getForestId(),
-                this::onTemperatureDataReceived
-        );
+        currentStreamContext = temperatureStreamClient.startStreamingTemperatureData(selectedSensor.getId(), selectedSensor.getForestId(), this::onTemperatureDataReceived);
 
         // Show stop button
         if (stopStreamButton != null) {
@@ -195,7 +170,7 @@ public class SensorDashboardController {
             }
 
             statusLabel.setText("Stream stopped");
-            
+
             // Show alert
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Stream Stopped");
@@ -215,13 +190,7 @@ public class SensorDashboardController {
                 LocalDateTime dateTime = LocalDateTime.now();
                 String timestamp = dateTime.format(timeFormatter);
 
-                TemperatureDataModel model = new TemperatureDataModel(
-                        data.getSensorId(),
-                        data.getSensorName(),
-                        data.getForestId(),
-                        data.getTemperature(),
-                        timestamp
-                );
+                TemperatureDataModel model = new TemperatureDataModel(data.getSensorId(), data.getSensorName(), data.getForestId(), data.getTemperature(), timestamp);
 
                 // Add to list (keep last 50 entries)
                 temperatureDataList.add(0, model);

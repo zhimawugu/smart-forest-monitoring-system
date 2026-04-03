@@ -72,8 +72,7 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
     }
 
     @Override
-    public void streamTemperatureData(StreamTemperatureRequest request, 
-                                     StreamObserver<TemperatureData> responseObserver) {
+    public void streamTemperatureData(StreamTemperatureRequest request, StreamObserver<TemperatureData> responseObserver) {
         String sensorId = request.getSensorId();
         String forestId = request.getForestId();
 
@@ -84,11 +83,9 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
             }, java.util.concurrent.Executors.newSingleThreadExecutor());
 
             // Get sensor details
-            ListSensorsRequest listRequest = ListSensorsRequest.newBuilder()
-                    .setForestId(forestId)
-                    .build();
+            ListSensorsRequest listRequest = ListSensorsRequest.newBuilder().setForestId(forestId).build();
             ListSensorsResponse sensors = sensorService.listSensors(listRequest);
-            
+
             // Find the sensor with matching ID
             String sensorName = null;
             for (Sensor sensor : sensors.getSensorsList()) {
@@ -99,9 +96,7 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
             }
 
             if (sensorName == null) {
-                responseObserver.onError(
-                    Status.NOT_FOUND.withDescription("Sensor not found").asException()
-                );
+                responseObserver.onError(Status.NOT_FOUND.withDescription("Sensor not found").asException());
                 return;
             }
 
@@ -110,12 +105,9 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
                 try {
                     // Check deadline
                     if (Context.current().getDeadline() != null) {
-                        long timeRemainingMs = Context.current().getDeadline()
-                                .timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
+                        long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
                         if (timeRemainingMs <= 0) {
-                            responseObserver.onError(
-                                Status.DEADLINE_EXCEEDED.withDescription("Stream deadline exceeded").asException()
-                            );
+                            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Stream deadline exceeded").asException());
                             return;
                         }
                     }

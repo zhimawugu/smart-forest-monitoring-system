@@ -18,7 +18,7 @@
 
     <!-- Button Bar -->
     <HBox spacing="10">
-        <Button fx:id="addButton" text="Add Forest" onAction="#handleAddForest"
+        <Button text="Add Forest" onAction="#handleAddForest"
                 style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12px;">
             <HBox.margin>
                 <Insets/>
@@ -26,11 +26,11 @@
         </Button>
 
 
-        <Button fx:id="deleteButton" text="Batch Delete" onAction="#handleBatchDelete"
+        <Button text="Batch Delete" onAction="#handleBatchDelete"
                 style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 12px;">
         </Button>
 
-        <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefresh"
+        <Button text="Refresh" onAction="#handleRefresh"
                 style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 12px;">
         </Button>
     </HBox>
@@ -42,7 +42,6 @@
             <TableColumn fx:id="nameColumn" text="Name" prefWidth="150"/>
             <TableColumn fx:id="latitudeColumn" text="Latitude" prefWidth="120"/>
             <TableColumn fx:id="longitudeColumn" text="Longitude" prefWidth="120"/>
-            <TableColumn fx:id="addressColumn" text="Address" prefWidth="250"/>
         </columns>
         <columnResizePolicy>
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>

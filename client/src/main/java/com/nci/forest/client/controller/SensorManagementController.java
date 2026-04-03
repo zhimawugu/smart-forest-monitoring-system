@@ -16,7 +16,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,12 +24,11 @@ import java.util.Optional;
  * Handles adding and removing sensors for forests
  */
 public class SensorManagementController {
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     @FXML
     private ComboBox<ForestModel> forestComboBox;
-
     @FXML
     private TableView<SensorModel> sensorsTable;
-
     @FXML
     private TableColumn<SensorModel, String> idColumn;
     @FXML
@@ -43,19 +41,15 @@ public class SensorManagementController {
     private TableColumn<SensorModel, String> createdAtColumn;
     @FXML
     private TableColumn<SensorModel, String> actionColumn;
-
     @FXML
     private Button addSensorButton;
     @FXML
     private Button refreshButton;
-
     @FXML
     private Label statusLabel;
-
     private ForestGrpcClient forestGrpcClient;
     private SensorGrpcClient sensorGrpcClient;
     private ForestModel selectedForest;
-    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @FXML
     public void initialize() {
@@ -115,13 +109,7 @@ public class SensorManagementController {
                 Platform.runLater(() -> {
                     forestComboBox.getItems().clear();
                     for (Forest forest : forests) {
-                        ForestModel model = new ForestModel(
-                                forest.getId(),
-                                forest.getName(),
-                                String.valueOf(forest.getLatitude()),
-                                String.valueOf(forest.getLongitude()),
-                                ""
-                        );
+                        ForestModel model = new ForestModel(forest.getId(), forest.getName(), String.valueOf(forest.getLatitude()), String.valueOf(forest.getLongitude()));
                         forestComboBox.getItems().add(model);
                     }
 
@@ -167,19 +155,9 @@ public class SensorManagementController {
                     sensorsTable.getItems().clear();
 
                     for (Sensor sensor : sensors) {
-                        LocalDateTime dateTime = LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(sensor.getCreatedAt()),
-                                ZoneId.systemDefault()
-                        );
+                        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(sensor.getCreatedAt()), ZoneId.systemDefault());
 
-                        SensorModel model = new SensorModel(
-                                sensor.getId(),
-                                sensor.getName(),
-                                sensor.getForestId(),
-                                sensor.getLatitude(),
-                                sensor.getLongitude(),
-                                dateTime.format(dateFormatter)
-                        );
+                        SensorModel model = new SensorModel(sensor.getId(), sensor.getName(), sensor.getForestId(), sensor.getLatitude(), sensor.getLongitude(), dateTime.format(dateFormatter));
                         sensorsTable.getItems().add(model);
                     }
 

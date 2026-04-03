@@ -34,8 +34,7 @@ public final class GrpcServiceDiscovery {
                 }
             }
         } catch (IOException e) {
-            logger.warn("mDNS discovery failed, fallback to {}:{} - {}",
-                    DEFAULT_HOST, DEFAULT_PORT, e.getMessage());
+            logger.warn("mDNS discovery failed, fallback to {}:{} - {}", DEFAULT_HOST, DEFAULT_PORT, e.getMessage());
         }
 
         return new Endpoint(DEFAULT_HOST, DEFAULT_PORT);

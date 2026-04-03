@@ -25,28 +25,19 @@ public class SensorGrpcClient {
 
     public SensorGrpcClient() {
         GrpcServiceDiscovery.Endpoint endpoint = GrpcServiceDiscovery.resolve(SERVICE_TYPE);
-        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port())
-                .usePlaintext()
-                .build();
+        this.channel = ManagedChannelBuilder.forAddress(endpoint.host(), endpoint.port()).usePlaintext().build();
         this.blockingStub = SensorServiceGrpc.newBlockingStub(channel);
     }
 
     /**
      * Add sensor to forest
      */
-    public AddSensorResponse addSensor(String forestId, String sensorName,
-                                       double latitude, double longitude) {
+    public AddSensorResponse addSensor(String forestId, String sensorName, double latitude, double longitude) {
         try {
-            AddSensorRequest request = AddSensorRequest.newBuilder()
-                    .setForestId(forestId)
-                    .setName(sensorName)
-                    .setLatitude(latitude)
-                    .setLongitude(longitude)
-                    .build();
+            AddSensorRequest request = AddSensorRequest.newBuilder().setForestId(forestId).setName(sensorName).setLatitude(latitude).setLongitude(longitude).build();
 
             // Set deadline for the request - automatically times out after specified seconds
-            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
-                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             AddSensorResponse response = stubWithDeadline.addSensor(request);
             return response;
         } catch (io.grpc.StatusRuntimeException e) {
@@ -68,12 +59,9 @@ public class SensorGrpcClient {
      */
     public RemoveSensorResponse removeSensor(String sensorId) {
         try {
-            RemoveSensorRequest request = RemoveSensorRequest.newBuilder()
-                    .setSensorId(sensorId)
-                    .build();
+            RemoveSensorRequest request = RemoveSensorRequest.newBuilder().setSensorId(sensorId).build();
 
-            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
-                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             RemoveSensorResponse response = stubWithDeadline.removeSensor(request);
             return response;
         } catch (Exception e) {
@@ -87,12 +75,9 @@ public class SensorGrpcClient {
      */
     public List<Sensor> listSensors(String forestId) {
         try {
-            ListSensorsRequest request = ListSensorsRequest.newBuilder()
-                    .setForestId(forestId)
-                    .build();
+            ListSensorsRequest request = ListSensorsRequest.newBuilder().setForestId(forestId).build();
 
-            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = 
-                blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+            SensorServiceGrpc.SensorServiceBlockingStub stubWithDeadline = blockingStub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
             ListSensorsResponse response = stubWithDeadline.listSensors(request);
             return new ArrayList<>(response.getSensorsList());
         } catch (Exception e) {

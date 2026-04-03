@@ -1,17 +1,17 @@
 package com.nci.forest.server.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
+
 import javax.annotation.PreDestroy;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 import java.io.IOException;
 import java.net.InetAddress;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
-import org.springframework.beans.factory.annotation.Value;
 
 /**
  * gRPC Server Configuration
@@ -54,12 +54,7 @@ public class GrpcServerConfig {
             InetAddress localAddress = InetAddress.getLocalHost();
             jmDNS = JmDNS.create(localAddress);
 
-            serviceInfo = ServiceInfo.create(
-                    mdnsServiceType,
-                    mdnsServiceName,
-                    grpcPort,
-                    mdnsServiceDescription
-            );
+            serviceInfo = ServiceInfo.create(mdnsServiceType, mdnsServiceName, grpcPort, mdnsServiceDescription);
             jmDNS.registerService(serviceInfo);
         } catch (IOException e) {
             logger.warn("Failed to register mDNS service, fallback to static endpoint: {}", e.getMessage());

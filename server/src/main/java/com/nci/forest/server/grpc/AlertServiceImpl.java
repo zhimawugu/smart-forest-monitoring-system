@@ -1,6 +1,8 @@
 package com.nci.forest.server.grpc;
 
-import com.nci.forest.proto.*;
+import com.nci.forest.proto.AlertEvent;
+import com.nci.forest.proto.AlertMessage;
+import com.nci.forest.proto.AlertServiceGrpc;
 import com.nci.forest.server.service.AlertService;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -16,7 +18,6 @@ import java.util.UUID;
  */
 @GrpcService
 public class AlertServiceImpl extends AlertServiceGrpc.AlertServiceImplBase {
-
     private static final Logger logger = LoggerFactory.getLogger(AlertServiceImpl.class);
 
     @Autowired

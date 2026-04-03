@@ -13,6 +13,10 @@ import java.io.IOException;
  */
 public class ForestClientApplication extends Application {
 
+    public static void main(String[] args) {
+        launch(args);
+    }
+
     @Override
     public void start(Stage primaryStage) throws IOException {
         // Load FXML
@@ -26,9 +30,5 @@ public class ForestClientApplication extends Application {
         primaryStage.setTitle("Forest Monitoring System - Client");
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
-
-    public static void main(String[] args) {
-        launch(args);
     }
 }
