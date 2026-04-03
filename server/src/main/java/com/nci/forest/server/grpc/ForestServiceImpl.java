@@ -29,14 +29,8 @@ public class ForestServiceImpl extends ForestServiceGrpc.ForestServiceImplBase {
     @Override
     public void addForest(AddForestRequest request, StreamObserver<AddForestResponse> responseObserver) {
         try {
-            // Check deadline - return error if already exceeded
-            if (Context.current().getDeadline() != null) {
-                long timeRemainingMs = Context.current().getDeadline().timeRemaining(java.util.concurrent.TimeUnit.MILLISECONDS);
-                if (timeRemainingMs <= 0) {
-                    responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Request deadline exceeded").asException());
-                    return;
-                }
-            }
+            // add thread sleep to test the deadline
+//            Thread.sleep(6000);
 
             // Validate request - name
             if (request.getName() == null || request.getName().isEmpty()) {

@@ -25,13 +25,13 @@ public class GrpcServerConfig {
     private int grpcPort;
 
     @Value("${jmdns.service.type:_forest-grpc._tcp.local.}")
-    private String mdnsServiceType;
+    private String jmdnsServiceType;
 
     @Value("${jmdns.service.name:forest-grpc-server}")
-    private String mdnsServiceName;
+    private String jmdnsServiceName;
 
     @Value("${jmdns.service.description:Smart Forest gRPC Server}")
-    private String mdnsServiceDescription;
+    private String jmdnsServiceDescription;
 
     private JmDNS jmDNS;
     private ServiceInfo serviceInfo;
@@ -54,7 +54,7 @@ public class GrpcServerConfig {
             InetAddress localAddress = InetAddress.getLocalHost();
             jmDNS = JmDNS.create(localAddress);
 
-            serviceInfo = ServiceInfo.create(mdnsServiceType, mdnsServiceName, grpcPort, mdnsServiceDescription);
+            serviceInfo = ServiceInfo.create(jmdnsServiceType, jmdnsServiceName, grpcPort, jmdnsServiceDescription);
             jmDNS.registerService(serviceInfo);
         } catch (IOException e) {
             logger.warn("Failed to register mDNS service, fallback to static endpoint: {}", e.getMessage());

@@ -79,6 +79,7 @@ public class SensorServiceImpl extends SensorServiceGrpc.SensorServiceImplBase {
         try {
             // Set up cancellation handler
             Context.current().addListener(context -> {
+                logger.error("Cancellation detected");
                 temperatureSimulatorService.unsubscribe(sensorId, null);
             }, java.util.concurrent.Executors.newSingleThreadExecutor());
 
